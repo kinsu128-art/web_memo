@@ -28,3 +28,6 @@ build/
 # 임시 파일
 tmp/
 temp/
+
+# Docker 데이터 (로컬 저장소)
+data/
