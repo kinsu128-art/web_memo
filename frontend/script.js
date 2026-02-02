@@ -17,6 +17,7 @@ let allNotes = [];
 let filteredNotes = [];
 let currentNoteId = null;
 let saveTimeout = null;
+let filterMode = 'all'; // 'all' 또는 'favorites'
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -98,11 +99,16 @@ function createNoteElement(note) {
 
     const date = new Date(note.updated_at);
     const dateStr = formatNoteDate(date);
+    const favoriteIcon = note.is_favorite ? '★' : '☆';
+    const favoriteColor = note.is_favorite ? 'text-yellow-400' : 'text-[#506795]';
 
     div.innerHTML = `
         <div class="flex justify-between items-start mb-1">
-            <h3 class="text-[#0e121b] dark:text-white text-base font-semibold leading-tight line-clamp-1">${escapeHtml(note.title)}</h3>
-            <span class="text-[11px] text-[#506795] font-medium shrink-0">${dateStr}</span>
+            <h3 class="text-[#0e121b] dark:text-white text-base font-semibold leading-tight line-clamp-1 flex-1">${escapeHtml(note.title)}</h3>
+            <div class="flex items-center gap-2 shrink-0">
+                <button class="text-lg ${favoriteColor} hover:text-yellow-400 transition-colors" onclick="event.stopPropagation(); toggleFavorite(${note.id})" title="즐겨찾기">${favoriteIcon}</button>
+                <span class="text-[11px] text-[#506795] font-medium">${dateStr}</span>
+            </div>
         </div>
         <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(note.content)}</p>
     `;
@@ -257,15 +263,100 @@ function handleSearch(searchTerm) {
     const term = searchTerm.toLowerCase().trim();
 
     if (!term) {
-        filteredNotes = allNotes;
+        // Apply filter mode
+        if (filterMode === 'favorites') {
+            filteredNotes = allNotes.filter(note => note.is_favorite);
+        } else {
+            filteredNotes = allNotes;
+        }
     } else {
-        filteredNotes = allNotes.filter(note =>
+        let notes = filterMode === 'favorites'
+            ? allNotes.filter(note => note.is_favorite)
+            : allNotes;
+
+        filteredNotes = notes.filter(note =>
             note.title.toLowerCase().includes(term) ||
             note.content.toLowerCase().includes(term)
         );
     }
 
     renderNotesList();
+}
+
+// Toggle favorite
+async function toggleFavorite(id) {
+    try {
+        console.log(`⭐ 즐겨찾기 토글: ${id}`);
+        const response = await fetch(`/api/memos/${id}/favorite`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('⭐ 즐겨찾기 응답:', result);
+
+        if (result.success && result.data) {
+            // Update note in allNotes
+            const index = allNotes.findIndex(n => n.id === id);
+            if (index !== -1) {
+                allNotes[index] = result.data;
+            }
+
+            // Update filtered notes
+            const filteredIndex = filteredNotes.findIndex(n => n.id === id);
+            if (filteredIndex !== -1) {
+                filteredNotes[filteredIndex] = result.data;
+            }
+
+            // Re-render list
+            renderNotesList();
+
+            // Show message
+            showNotification(result.message);
+            console.log(`✅ 즐겨찾기 토글 완료`);
+        } else {
+            throw new Error(result.error || '즐겨찾기 토글 실패');
+        }
+    } catch (error) {
+        console.error('❌ 즐겨찾기 토글 실패:', error);
+        showNotification(`즐겨찾기 토글 실패: ${error.message}`, 'error');
+    }
+}
+
+// Load favorites
+async function loadFavorites() {
+    try {
+        console.log('⭐ 즐겨찾기 목록 로드');
+        filterMode = 'favorites';
+
+        // Filter locally first
+        filteredNotes = allNotes.filter(note => note.is_favorite);
+        renderNotesList();
+
+        // Show message
+        showNotification(`${filteredNotes.length}개의 즐겨찾기`);
+    } catch (error) {
+        console.error('❌ 즐겨찾기 로드 실패:', error);
+        showNotification('즐겨찾기를 불러올 수 없습니다', 'error');
+    }
+}
+
+// Load all notes (reset filter)
+function loadAllNotes() {
+    try {
+        console.log('📝 모든 메모 로드');
+        filterMode = 'all';
+        filteredNotes = allNotes;
+        renderNotesList();
+        searchInput.value = '';
+    } catch (error) {
+        console.error('❌ 메모 로드 실패:', error);
+        showNotification('메모를 불러올 수 없습니다', 'error');
+    }
 }
 
 // Open delete modal

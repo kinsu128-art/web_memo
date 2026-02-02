@@ -66,11 +66,11 @@
             </div>
         </div>
         <div class="flex flex-col gap-6 flex-1">
-            <button class="flex flex-col items-center gap-1 text-primary group" title="모든 메모">
+            <button class="flex flex-col items-center gap-1 text-primary group" title="모든 메모" id="notesBtn" onclick="loadAllNotes()">
                 <span class="material-symbols-outlined active-nav-icon text-2xl">inbox</span>
                 <span class="text-[10px] font-semibold uppercase tracking-wider">Notes</span>
             </button>
-            <button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group" title="즐겨찾기" onclick="alert('준비 중입니다')">
+            <button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group" title="즐겨찾기" id="favBtn" onclick="loadFavorites()">
                 <span class="material-symbols-outlined text-2xl">star</span>
                 <span class="text-[10px] font-semibold uppercase tracking-wider">Favs</span>
             </button>

@@ -32,4 +32,16 @@ router.put('/:id', memoController.updateMemo);
  */
 router.delete('/:id', memoController.deleteMemo);
 
+/**
+ * PUT /api/memos/:id/favorite
+ * 즐겨찾기 토글
+ */
+router.put('/:id/favorite', memoController.toggleFavorite);
+
+/**
+ * GET /api/memos/favorite
+ * 즐겨찾기된 메모만 조회
+ */
+router.get('/favorite/list', memoController.getFavorites);
+
 module.exports = router;

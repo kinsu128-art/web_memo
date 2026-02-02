@@ -190,3 +190,64 @@ exports.deleteMemo = async (req, res) => {
     });
   }
 };
+
+/**
+ * 즐겨찾기 토글
+ */
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 입력 검증
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: '유효한 메모 ID를 입력해주세요',
+      });
+    }
+
+    const memo = await Memo.toggleFavorite(id);
+
+    res.status(200).json({
+      success: true,
+      message: memo.is_favorite ? '즐겨찾기 추가됨' : '즐겨찾기 제거됨',
+      data: memo,
+    });
+  } catch (error) {
+    console.error('❌ 즐겨찾기 토글 실패:', error);
+
+    if (error.message === '메모를 찾을 수 없습니다') {
+      return res.status(404).json({
+        success: false,
+        message: '메모를 찾을 수 없습니다',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '즐겨찾기 토글에 실패했습니다',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * 즐겨찾기된 메모만 조회
+ */
+exports.getFavorites = async (req, res) => {
+  try {
+    const memos = await Memo.findFavorites();
+    res.status(200).json({
+      success: true,
+      data: memos,
+      count: memos.length,
+    });
+  } catch (error) {
+    console.error('❌ 즐겨찾기 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '즐겨찾기를 불러올 수 없습니다',
+      error: error.message,
+    });
+  }
+};

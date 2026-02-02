@@ -122,6 +122,67 @@ class Memo {
       throw error;
     }
   }
+
+  /**
+   * 즐겨찾기 토글
+   * @param {number} id 메모 ID
+   * @returns {Promise<Object>} 수정된 메모 객체
+   */
+  static async toggleFavorite(id) {
+    try {
+      const connection = await pool.getConnection();
+
+      // 현재 상태 확인
+      const [rows] = await connection.query(
+        'SELECT is_favorite FROM memos WHERE id = ?',
+        [id]
+      );
+
+      if (rows.length === 0) {
+        connection.release();
+        throw new Error('메모를 찾을 수 없습니다');
+      }
+
+      const currentState = rows[0].is_favorite;
+      const newState = !currentState;
+
+      // 상태 업데이트
+      const [result] = await connection.query(
+        'UPDATE memos SET is_favorite = ? WHERE id = ?',
+        [newState, id]
+      );
+
+      connection.release();
+
+      if (result.affectedRows === 0) {
+        throw new Error('메모를 찾을 수 없습니다');
+      }
+
+      // 수정된 메모 반환
+      return this.findById(id);
+    } catch (error) {
+      console.error('❌ 즐겨찾기 토글 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 즐겨찾기된 메모만 조회
+   * @returns {Promise<Array>} 즐겨찾기 메모 배열
+   */
+  static async findFavorites() {
+    try {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        'SELECT * FROM memos WHERE is_favorite = TRUE ORDER BY updated_at DESC'
+      );
+      connection.release();
+      return rows;
+    } catch (error) {
+      console.error('❌ 즐겨찾기 조회 실패:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = Memo;
