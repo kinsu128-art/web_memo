@@ -359,6 +359,17 @@ function loadAllNotes() {
     }
 }
 
+// Load trash (recently deleted memos)
+function loadTrash() {
+    try {
+        console.log('🗑️ 휴지통 로드');
+        showNotification('휴지통은 삭제된 메모를 보여줍니다.\n메모를 삭제하면 여기에 나타납니다.\n\n현재 삭제된 메모가 없습니다.', 'error');
+    } catch (error) {
+        console.error('❌ 휴지통 로드 실패:', error);
+        showNotification('휴지통을 불러올 수 없습니다', 'error');
+    }
+}
+
 // Open delete modal
 function openDeleteModal() {
     if (currentNoteId) {
@@ -491,17 +502,25 @@ function escapeHtml(text) {
 
 // Text formatting functions
 function applyFormat(format) {
+    if (!memoContent) {
+        console.error('❌ memoContent 요소를 찾을 수 없습니다');
+        showNotification('에디터가 준비되지 않았습니다', 'error');
+        return;
+    }
+
     const textarea = memoContent;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
     const selectedText = textarea.value.substring(start, end);
 
-    if (!selectedText) {
+    if (!selectedText && format !== 'insertUnorderedList' && format !== 'insertOrderedList') {
         showNotification('텍스트를 선택해주세요', 'error');
         return;
     }
 
     let formattedText = selectedText;
+
+    console.log(`📝 포맷팅 적용: ${format}`);
 
     switch (format) {
         case 'bold':
@@ -517,47 +536,80 @@ function applyFormat(format) {
             formattedText = `~~${selectedText}~~`;
             break;
         case 'insertUnorderedList':
-            formattedText = selectedText.split('\n').map(line => `- ${line}`).join('\n');
+            if (selectedText) {
+                formattedText = selectedText.split('\n').map(line => `- ${line.trim()}`).filter(l => l !== '-').join('\n');
+            } else {
+                formattedText = '- 항목';
+            }
             break;
         case 'insertOrderedList':
-            formattedText = selectedText.split('\n').map((line, i) => `${i + 1}. ${line}`).join('\n');
+            if (selectedText) {
+                formattedText = selectedText.split('\n').map((line, i) => `${i + 1}. ${line.trim()}`).filter(l => !l.match(/^\\d+\\. $/)).join('\n');
+            } else {
+                formattedText = '1. 항목';
+            }
             break;
+        default:
+            console.warn(`⚠️  알 수 없는 포맷: ${format}`);
+            return;
     }
 
     // Replace selected text
-    textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + formattedText + after;
+
+    console.log(`✅ 포맷팅 완료: ${formattedText.substring(0, 50)}`);
 
     // Update note
     updateCurrentNote();
 
-    // Restore focus
+    // Restore focus and selection
     textarea.focus();
-    textarea.selectionStart = start;
-    textarea.selectionEnd = start + formattedText.length;
+    const newEnd = start + formattedText.length;
+    textarea.setSelectionRange(start, newEnd);
 }
 
 function insertCode() {
+    if (!memoContent) {
+        showNotification('에디터가 준비되지 않았습니다', 'error');
+        return;
+    }
+
     const textarea = memoContent;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
     const selectedText = textarea.value.substring(start, end);
 
     const codeBlock = selectedText ? `\`\`\`\n${selectedText}\n\`\`\`` : '```\n코드를 입력하세요\n```';
 
-    textarea.value = textarea.value.substring(0, start) + codeBlock + textarea.value.substring(end);
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + codeBlock + after;
+
+    console.log('📝 코드 블록 삽입됨');
     updateCurrentNote();
     textarea.focus();
 }
 
 function insertQuote() {
+    if (!memoContent) {
+        showNotification('에디터가 준비되지 않았습니다', 'error');
+        return;
+    }
+
     const textarea = memoContent;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
     const selectedText = textarea.value.substring(start, end);
 
     const quoteBlock = selectedText ? selectedText.split('\n').map(line => `> ${line}`).join('\n') : '> 인용구를 입력하세요';
 
-    textarea.value = textarea.value.substring(0, start) + quoteBlock + textarea.value.substring(end);
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + quoteBlock + after;
+
+    console.log('📝 인용구 삽입됨');
     updateCurrentNote();
     textarea.focus();
 }
@@ -565,9 +617,14 @@ function insertQuote() {
 function applyColor(color) {
     if (!color) return;
 
+    if (!memoContent) {
+        showNotification('에디터가 준비되지 않았습니다', 'error');
+        return;
+    }
+
     const textarea = memoContent;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = textarea.selectionStart || 0;
+    const end = textarea.selectionEnd || 0;
     const selectedText = textarea.value.substring(start, end);
 
     if (!selectedText) {
@@ -578,19 +635,33 @@ function applyColor(color) {
     // 간단한 마크다운 스타일 색상 표현
     const coloredText = `[${selectedText}](color:${color})`;
 
-    textarea.value = textarea.value.substring(0, start) + coloredText + textarea.value.substring(end);
+    const before = textarea.value.substring(0, start);
+    const after = textarea.value.substring(end);
+    textarea.value = before + coloredText + after;
+
+    console.log(`🎨 색상 적용: ${color}`);
     updateCurrentNote();
     textarea.focus();
 
     // Reset select
-    document.getElementById('textColor').value = '';
+    const colorSelect = document.getElementById('textColor');
+    if (colorSelect) {
+        colorSelect.value = '';
+    }
 }
 
 function clearFormatting() {
-    memoContent.value = '';
-    updateCurrentNote();
-    showNotification('내용이 삭제되었습니다');
-    memoContent.focus();
+    if (!memoContent) {
+        showNotification('에디터가 준비되지 않았습니다', 'error');
+        return;
+    }
+
+    if (confirm('정말 모든 내용을 삭제하시겠습니까?')) {
+        memoContent.value = '';
+        updateCurrentNote();
+        showNotification('내용이 삭제되었습니다');
+        memoContent.focus();
+    }
 }
 
 // Keyboard shortcuts
