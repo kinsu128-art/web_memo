@@ -489,5 +489,134 @@ function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => map[m]);
 }
 
+// Text formatting functions
+function applyFormat(format) {
+    const textarea = memoContent;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    if (!selectedText) {
+        showNotification('텍스트를 선택해주세요', 'error');
+        return;
+    }
+
+    let formattedText = selectedText;
+
+    switch (format) {
+        case 'bold':
+            formattedText = `**${selectedText}**`;
+            break;
+        case 'italic':
+            formattedText = `*${selectedText}*`;
+            break;
+        case 'underline':
+            formattedText = `__${selectedText}__`;
+            break;
+        case 'strikethrough':
+            formattedText = `~~${selectedText}~~`;
+            break;
+        case 'insertUnorderedList':
+            formattedText = selectedText.split('\n').map(line => `- ${line}`).join('\n');
+            break;
+        case 'insertOrderedList':
+            formattedText = selectedText.split('\n').map((line, i) => `${i + 1}. ${line}`).join('\n');
+            break;
+    }
+
+    // Replace selected text
+    textarea.value = textarea.value.substring(0, start) + formattedText + textarea.value.substring(end);
+
+    // Update note
+    updateCurrentNote();
+
+    // Restore focus
+    textarea.focus();
+    textarea.selectionStart = start;
+    textarea.selectionEnd = start + formattedText.length;
+}
+
+function insertCode() {
+    const textarea = memoContent;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    const codeBlock = selectedText ? `\`\`\`\n${selectedText}\n\`\`\`` : '```\n코드를 입력하세요\n```';
+
+    textarea.value = textarea.value.substring(0, start) + codeBlock + textarea.value.substring(end);
+    updateCurrentNote();
+    textarea.focus();
+}
+
+function insertQuote() {
+    const textarea = memoContent;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    const quoteBlock = selectedText ? selectedText.split('\n').map(line => `> ${line}`).join('\n') : '> 인용구를 입력하세요';
+
+    textarea.value = textarea.value.substring(0, start) + quoteBlock + textarea.value.substring(end);
+    updateCurrentNote();
+    textarea.focus();
+}
+
+function applyColor(color) {
+    if (!color) return;
+
+    const textarea = memoContent;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+
+    if (!selectedText) {
+        showNotification('텍스트를 선택해주세요', 'error');
+        return;
+    }
+
+    // 간단한 마크다운 스타일 색상 표현
+    const coloredText = `[${selectedText}](color:${color})`;
+
+    textarea.value = textarea.value.substring(0, start) + coloredText + textarea.value.substring(end);
+    updateCurrentNote();
+    textarea.focus();
+
+    // Reset select
+    document.getElementById('textColor').value = '';
+}
+
+function clearFormatting() {
+    memoContent.value = '';
+    updateCurrentNote();
+    showNotification('내용이 삭제되었습니다');
+    memoContent.focus();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (!memoContent) return;
+
+    const isFocused = document.activeElement === memoContent;
+    if (!isFocused) return;
+
+    if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+            case 'b':
+                e.preventDefault();
+                applyFormat('bold');
+                break;
+            case 'i':
+                e.preventDefault();
+                applyFormat('italic');
+                break;
+            case 'u':
+                e.preventDefault();
+                applyFormat('underline');
+                break;
+        }
+    }
+});
+
 // Load theme on startup
 loadTheme();

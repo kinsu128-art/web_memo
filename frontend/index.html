@@ -156,8 +156,59 @@
                     </div>
                 </div>
 
+                <!-- Formatting Toolbar -->
+                <div class="flex items-center gap-2 flex-wrap mb-4 p-3 bg-[#f6f6f8] dark:bg-[#1f2937] rounded-lg border border-[#e5e7eb] dark:border-[#2d3748]">
+                    <div class="flex items-center gap-1 border-r border-[#e5e7eb] dark:border-[#2d3748] pr-3">
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="굵게 (Ctrl+B)" onclick="applyFormat('bold')">
+                            <span class="material-symbols-outlined text-lg">format_bold</span>
+                        </button>
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="이탤릭 (Ctrl+I)" onclick="applyFormat('italic')">
+                            <span class="material-symbols-outlined text-lg">format_italic</span>
+                        </button>
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="밑줄 (Ctrl+U)" onclick="applyFormat('underline')">
+                            <span class="material-symbols-outlined text-lg">format_underlined</span>
+                        </button>
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="취소줄" onclick="applyFormat('strikethrough')">
+                            <span class="material-symbols-outlined text-lg">strikethrough_s</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1 border-r border-[#e5e7eb] dark:border-[#2d3748] pr-3">
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="목록" onclick="applyFormat('insertUnorderedList')">
+                            <span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                        </button>
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="번호 목록" onclick="applyFormat('insertOrderedList')">
+                            <span class="material-symbols-outlined text-lg">format_list_numbered</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1 border-r border-[#e5e7eb] dark:border-[#2d3748] pr-3">
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="코드 블록" onclick="insertCode()">
+                            <span class="material-symbols-outlined text-lg">code</span>
+                        </button>
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="인용구" onclick="insertQuote()">
+                            <span class="material-symbols-outlined text-lg">format_quote</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button class="p-2 hover:bg-white dark:hover:bg-[#374151] rounded-lg transition-colors" title="모두 지우기" onclick="clearFormatting()">
+                            <span class="material-symbols-outlined text-lg">clear_all</span>
+                        </button>
+                        <select id="textColor" class="px-2 py-2 bg-white dark:bg-[#374151] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg text-sm" onchange="applyColor(this.value)">
+                            <option value="">색상</option>
+                            <option value="#000000">검정색</option>
+                            <option value="#2060df">파란색</option>
+                            <option value="#dc2626">빨간색</option>
+                            <option value="#16a34a">초록색</option>
+                            <option value="#ea580c">주황색</option>
+                            <option value="#6366f1">보라색</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- Body Content -->
-                <textarea id="memoContent" class="w-full min-h-96 bg-transparent border-none focus:ring-0 p-0 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] resize-none" placeholder="메모 내용을 입력하세요..." oninput="updateCurrentNote(); updateReadTime()"></textarea>
+                <textarea id="memoContent" class="w-full min-h-96 bg-transparent border-none focus:ring-0 p-0 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] resize-none font-mono" placeholder="메모 내용을 입력하세요..." oninput="updateCurrentNote(); updateReadTime()"></textarea>
             </div>
         </div>
     </main>
