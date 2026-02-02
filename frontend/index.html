@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메모관리 - 간단한 메모 저장소</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <h1>📝 메모관리</h1>
+            <p class="subtitle">간단하고 빠른 메모 저장소</p>
+        </header>
+
+        <!-- 메인 콘텐츠 -->
+        <main class="main-content">
+            <!-- 좌측: 메모 목록 -->
+            <section class="memo-list-section">
+                <div class="section-header">
+                    <h2>메모 목록</h2>
+                    <button class="btn-refresh" id="refreshBtn" title="새로고침">🔄</button>
+                </div>
+
+                <!-- 검색 입력창 -->
+                <div class="search-box">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        class="search-input"
+                        placeholder="메모 검색 (제목/내용)..."
+                    >
+                    <button class="btn-search-clear" id="searchClearBtn" title="검색 초기화" style="display: none;">✕</button>
+                </div>
+
+                <div id="memoList" class="memo-list">
+                    <div class="loading">로딩 중...</div>
+                </div>
+            </section>
+
+            <!-- 우측: 메모 상세/생성 -->
+            <section class="memo-detail-section">
+                <div class="section-header">
+                    <h2 id="detailTitle">새 메모 작성</h2>
+                    <button class="btn-clear" id="clearBtn" title="초기화" style="display: none;">✕</button>
+                </div>
+
+                <form id="memoForm" class="memo-form">
+                    <div class="form-group">
+                        <label for="title">제목</label>
+                        <input
+                            type="text"
+                            id="title"
+                            placeholder="메모 제목을 입력하세요"
+                            required
+                            maxlength="255"
+                        >
+                        <small id="titleCount" class="char-count">0/255</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="content">내용</label>
+                        <textarea
+                            id="content"
+                            placeholder="메모 내용을 입력하세요"
+                            rows="12"
+                            required
+                        ></textarea>
+                        <small id="contentCount" class="char-count">0자</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">저장</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn" style="display: none;">취소</button>
+                    </div>
+                </form>
+
+                <div id="message" class="message"></div>
+            </section>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>© 2024 메모관리 앱 | 언제 어디서나 메모를 저장하세요</p>
+        </footer>
+    </div>
+
+    <!-- 메모 항목 템플릿 -->
+    <template id="memoItemTemplate">
+        <div class="memo-item" data-id="">
+            <div class="memo-item-header">
+                <h3 class="memo-title"></h3>
+                <span class="memo-date"></span>
+            </div>
+            <p class="memo-preview"></p>
+            <div class="memo-actions">
+                <button class="btn-edit" title="수정">✏️</button>
+                <button class="btn-delete" title="삭제">🗑️</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- 확인 다이얼로그 -->
+    <div id="confirmDialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>메모 삭제</h3>
+            <p id="confirmMessage">이 메모를 삭제하시겠습니까?</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="confirmBtn">삭제</button>
+                <button class="btn btn-secondary" id="cancelConfirmBtn">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
