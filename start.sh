@@ -10,9 +10,18 @@ echo ""
 
 cd "$(dirname "$0")"
 
-echo "[1/4] 데이터 디렉토리 확인 중..."
+echo "[1/4] 데이터 디렉토리 확인 및 초기화 중..."
+
+# data 디렉토리 생성
 mkdir -p data/mysql
 chmod 777 data/mysql 2>/dev/null || true
+
+# data/mysql이 비어있는지 확인
+if [ ! "$(ls -A data/mysql 2>/dev/null)" ]; then
+    echo "   ℹ️  MySQL 데이터 디렉토리가 비어있습니다. 초기화가 시작됩니다."
+else
+    echo "   ℹ️  기존 MySQL 데이터를 사용합니다."
+fi
 
 echo ""
 echo "[2/4] 도커 컴포즈 시작 중..."
