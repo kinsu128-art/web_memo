@@ -28,17 +28,22 @@ async function loadMemos() {
         const result = await response.json();
 
         if (result.success) {
-            allNotes = result.data;
+            allNotes = result.data || [];
             filteredNotes = allNotes;
             renderNotesList();
 
-            if (allNotes.length === 0) {
+            // Show empty state if no current note is selected and no notes exist
+            if (allNotes.length === 0 && !currentNoteId) {
                 showEmptyState();
             }
+        } else {
+            console.error('❌ API 응답 오류:', result);
+            showNotification('메모를 불러올 수 없습니다', 'error');
         }
     } catch (error) {
         console.error('❌ 메모 로드 실패:', error);
         showNotification('메모를 불러올 수 없습니다', 'error');
+        showEmptyState();
     }
 }
 
@@ -47,7 +52,11 @@ function renderNotesList() {
     notesList.innerHTML = '';
 
     if (filteredNotes.length === 0) {
-        notesList.innerHTML = '<div class="text-center text-[#506795] py-8">메모가 없습니다</div>';
+        if (searchInput.value.trim()) {
+            notesList.innerHTML = '<div class="text-center text-[#506795] py-8">검색 결과가 없습니다</div>';
+        } else {
+            notesList.innerHTML = '<div class="text-center text-[#506795] py-8">메모가 없습니다</div>';
+        }
         return;
     }
 
@@ -142,7 +151,7 @@ async function updateCurrentNote() {
     }
 
     // Show saving status
-    saveStatus.textContent = 'schedule';
+    saveStatus.innerText = 'schedule';
     saveText.textContent = '저장 중...';
 
     // Clear previous timeout
@@ -176,6 +185,7 @@ async function updateCurrentNote() {
             if (result.success) {
                 if (!currentNoteId && result.data.id) {
                     currentNoteId = result.data.id;
+                    deleteBtn.style.display = 'block';
                     memoDate.textContent = new Date().toLocaleDateString('ko-KR', {
                         year: 'numeric',
                         month: 'long',
@@ -184,16 +194,22 @@ async function updateCurrentNote() {
                 }
 
                 // Update save status
-                saveStatus.textContent = 'cloud_done';
+                saveStatus.innerText = 'cloud_done';
                 saveText.textContent = '저장됨';
 
                 // Reload notes list
                 loadMemos();
+            } else {
+                // Save failed
+                saveStatus.innerText = 'cloud_off';
+                saveText.textContent = '저장 실패';
+                showNotification('저장에 실패했습니다', 'error');
             }
         } catch (error) {
             console.error('❌ 저장 실패:', error);
-            saveStatus.textContent = 'cloud_off';
+            saveStatus.innerText = 'cloud_off';
             saveText.textContent = '저장 실패';
+            showNotification('메모 저장 중 오류가 발생했습니다', 'error');
         }
     }, 1000);
 }

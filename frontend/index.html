@@ -164,8 +164,8 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display:none;">
-    <div class="bg-white dark:bg-[#1a212f] rounded-xl shadow-2xl p-6 max-w-sm mx-4">
+<div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display:none;" onclick="if(event.target.id === 'deleteModal') closeDeleteModal()">
+    <div class="bg-white dark:bg-[#1a212f] rounded-xl shadow-2xl p-6 max-w-sm mx-4" onclick="event.stopPropagation()">
         <h3 class="text-lg font-semibold text-[#0e121b] dark:text-white mb-2">메모를 삭제하시겠습니까?</h3>
         <p class="text-[#506795] mb-6">이 작업은 되돌릴 수 없습니다.</p>
         <div class="flex gap-3 justify-end">
