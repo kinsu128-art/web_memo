@@ -19,17 +19,29 @@ let currentNoteId = null;
 let saveTimeout = null;
 
 // Initialize
-document.addEventListener('DOMContentLoaded', loadMemos);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('📱 페이지 로드됨');
+    console.log('API URL: /api/memos');
+    loadMemos();
+});
 
 // Load all memos from API
 async function loadMemos() {
     try {
+        console.log('📥 메모 로드 시작...');
         const response = await fetch('/api/memos');
-        const result = await response.json();
 
-        if (result.success) {
-            allNotes = result.data || [];
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('📦 API 응답:', result);
+
+        if (result.success && Array.isArray(result.data)) {
+            allNotes = result.data;
             filteredNotes = allNotes;
+            console.log(`✅ ${allNotes.length}개의 메모 로드됨`);
             renderNotesList();
 
             // Show empty state if no current note is selected and no notes exist
@@ -37,13 +49,20 @@ async function loadMemos() {
                 showEmptyState();
             }
         } else {
-            console.error('❌ API 응답 오류:', result);
+            console.error('❌ API 응답 형식 오류:', result);
+            allNotes = [];
+            filteredNotes = [];
+            renderNotesList();
+            showEmptyState();
             showNotification('메모를 불러올 수 없습니다', 'error');
         }
     } catch (error) {
         console.error('❌ 메모 로드 실패:', error);
-        showNotification('메모를 불러올 수 없습니다', 'error');
+        allNotes = [];
+        filteredNotes = [];
+        renderNotesList();
         showEmptyState();
+        showNotification(`메모 로드 실패: ${error.message}`, 'error');
     }
 }
 
@@ -95,18 +114,25 @@ function createNoteElement(note) {
 // Select and open a note
 async function selectNote(id) {
     try {
+        console.log(`📖 메모 로드 중: ${id}`);
         const response = await fetch(`/api/memos/${id}`);
-        const result = await response.json();
 
-        if (result.success) {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('📦 메모 응답:', result);
+
+        if (result.success && result.data) {
             currentNoteId = id;
             const note = result.data;
 
-            memoTitle.value = note.title;
-            memoContent.value = note.content;
+            memoTitle.value = note.title || '';
+            memoContent.value = note.content || '';
 
             // Update date
-            const date = new Date(note.updated_at);
+            const date = new Date(note.updated_at || note.created_at);
             memoDate.textContent = formatFullDate(date);
 
             // Update read time
@@ -118,9 +144,13 @@ async function selectNote(id) {
             // Update list styling
             renderNotesList();
             deleteBtn.style.display = 'block';
+            console.log(`✅ 메모 로드 완료: ${note.title}`);
+        } else {
+            throw new Error('API 응답 형식 오류');
         }
     } catch (error) {
         console.error('❌ 메모 로드 실패:', error);
+        showNotification(`메모 로드 실패: ${error.message}`, 'error');
     }
 }
 
@@ -163,27 +193,27 @@ async function updateCurrentNote() {
     saveTimeout = setTimeout(async () => {
         try {
             let response;
+            const isNewNote = !currentNoteId;
+            const method = isNewNote ? 'POST' : 'PUT';
+            const url = isNewNote ? '/api/memos' : `/api/memos/${currentNoteId}`;
 
-            if (currentNoteId) {
-                // Update existing note
-                response = await fetch(`/api/memos/${currentNoteId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content })
-                });
-            } else {
-                // Create new note
-                response = await fetch('/api/memos', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, content })
-                });
+            console.log(`💾 메모 저장: ${isNewNote ? '새로 생성' : '수정'} - ${url}`);
+
+            response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const result = await response.json();
+            console.log('💾 저장 응답:', result);
 
-            if (result.success) {
-                if (!currentNoteId && result.data.id) {
+            if (result.success && result.data) {
+                if (isNewNote && result.data.id) {
                     currentNoteId = result.data.id;
                     deleteBtn.style.display = 'block';
                     memoDate.textContent = new Date().toLocaleDateString('ko-KR', {
@@ -191,6 +221,9 @@ async function updateCurrentNote() {
                         month: 'long',
                         day: 'numeric'
                     });
+                    console.log(`✅ 새 메모 생성됨: ID ${currentNoteId}`);
+                } else if (!isNewNote) {
+                    console.log(`✅ 메모 수정됨: ID ${currentNoteId}`);
                 }
 
                 // Update save status
@@ -200,16 +233,13 @@ async function updateCurrentNote() {
                 // Reload notes list
                 loadMemos();
             } else {
-                // Save failed
-                saveStatus.innerText = 'cloud_off';
-                saveText.textContent = '저장 실패';
-                showNotification('저장에 실패했습니다', 'error');
+                throw new Error(result.error || '저장에 실패했습니다');
             }
         } catch (error) {
             console.error('❌ 저장 실패:', error);
             saveStatus.innerText = 'cloud_off';
             saveText.textContent = '저장 실패';
-            showNotification('메모 저장 중 오류가 발생했습니다', 'error');
+            showNotification(`메모 저장 실패: ${error.message}`, 'error');
         }
     }, 1000);
 }
