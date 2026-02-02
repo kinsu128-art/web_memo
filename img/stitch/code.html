@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minimal Notepad - Light Mode</title>
+<!-- Google Fonts: Inter for UI/Body, Playfair Display for Serif Titles -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Playfair+Display:ital,wght@0,600;1,600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2060df",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "editor-bg": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif-title": ["Playfair Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0e121b] antialiased">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- SideNavBar (Thin Global Nav) -->
+<nav class="flex w-20 flex-col items-center border-r border-[#e5e7eb] bg-background-light py-6 dark:border-[#1f2937] dark:bg-background-dark shrink-0">
+<div class="mb-10">
+<div class="size-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">edit_note</span>
+</div>
+</div>
+<div class="flex flex-col gap-6 flex-1">
+<button class="flex flex-col items-center gap-1 text-primary group">
+<span class="material-symbols-outlined active-nav-icon text-2xl">inbox</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider">Notes</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group">
+<span class="material-symbols-outlined text-2xl">star</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider">Favs</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group">
+<span class="material-symbols-outlined text-2xl">delete</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider">Trash</span>
+</button>
+</div>
+<div class="mt-auto">
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-white shadow-sm" data-alt="User profile avatar close up" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDK5bep6WKBQgrmHMLLcqN3HL44mKcDdUZ82OacWRn0TIIz4mwXrN9A2JezH3V3PKHZaJi2x-bfnJ8hLhKqejhoVym9V7s8_77kBy2sv62b1NlqfKJlTb6VV4EEJ7ic-JDmMjz9D1PBiDEYf_U8DLaaX6s8yRjkACeH54ABmbP4xFvDvkm11UjUBjjb-cnarfTS7bsfuYz4jfEpc4qDk3w-UgzkiThVq4sfR2gsTBm0IADKhnSrwC1pceekVrgCN1LS-TQvKpgs8p2d');">
+</div>
+</div>
+</nav>
+<!-- Note List Sidebar -->
+<aside class="w-80 border-r border-[#e5e7eb] bg-[#fcfcfd] flex flex-col dark:border-[#1f2937] dark:bg-[#151b28] shrink-0">
+<div class="p-6">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-xl font-bold tracking-tight">All Notes</h2>
+<button class="p-1 hover:bg-[#e8ebf3] rounded-lg transition-colors">
+<span class="material-symbols-outlined text-[#506795]">search</span>
+</button>
+</div>
+<div class="space-y-1 overflow-y-auto custom-scrollbar h-[calc(100vh-140px)]">
+<!-- ListItem Active -->
+<div class="group cursor-pointer p-4 rounded-xl bg-primary/10 border border-primary/10 transition-all">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-[#0e121b] dark:text-white text-base font-semibold leading-tight line-clamp-1">Monday Thoughts</h3>
+<span class="text-[11px] text-[#506795] font-medium shrink-0">10:30 AM</span>
+</div>
+<p class="text-[#506795] text-sm leading-relaxed line-clamp-2">The week starts with clarity and focus on the new roadmap. We need to align the team...</p>
+</div>
+<!-- ListItem -->
+<div class="group cursor-pointer p-4 rounded-xl hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] border border-transparent transition-all">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-[#0e121b] dark:text-white text-base font-medium leading-tight line-clamp-1">Project Alpha</h3>
+<span class="text-[11px] text-[#506795] font-medium shrink-0">Yesterday</span>
+</div>
+<p class="text-[#506795] text-sm leading-relaxed line-clamp-2">Next steps for the product design sprint involve user feedback loops and internal audits...</p>
+</div>
+<!-- ListItem -->
+<div class="group cursor-pointer p-4 rounded-xl hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] border border-transparent transition-all">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-[#0e121b] dark:text-white text-base font-medium leading-tight line-clamp-1">Grocery List</h3>
+<span class="text-[11px] text-[#506795] font-medium shrink-0">Oct 12</span>
+</div>
+<p class="text-[#506795] text-sm leading-relaxed line-clamp-2">Milk, Eggs, Coffee beans, Sourdough bread, and maybe some fresh basil for tonight's...</p>
+</div>
+<!-- ListItem -->
+<div class="group cursor-pointer p-4 rounded-xl hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] border border-transparent transition-all">
+<div class="flex justify-between items-start mb-1">
+<h3 class="text-[#0e121b] dark:text-white text-base font-medium leading-tight line-clamp-1">Design Inspiration</h3>
+<span class="text-[11px] text-[#506795] font-medium shrink-0">Oct 10</span>
+</div>
+<p class="text-[#506795] text-sm leading-relaxed line-clamp-2">Found a great portfolio site that uses minimal grids and expressive serif typography for headers...</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content (Editor) -->
+<main class="flex-1 bg-editor-bg flex flex-col dark:bg-[#0b0f18]">
+<!-- ToolBar / Header -->
+<header class="flex items-center justify-between px-8 py-4 bg-editor-bg/80 backdrop-blur-md sticky top-0 z-10 dark:bg-[#0b0f18]/80">
+<div class="flex items-center gap-2 text-[#506795]">
+<span class="material-symbols-outlined text-primary text-xl">cloud_done</span>
+<span class="text-sm font-medium">Saved to cloud</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-[#506795] hover:bg-background-light rounded-lg transition-colors dark:hover:bg-[#1f2937]">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+<button class="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-lg">share</span>
+<span>Share</span>
+</button>
+</div>
+</header>
+<!-- Editor Space -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-12 md:px-24 lg:px-32 py-12 max-w-5xl mx-auto w-full">
+<div class="flex flex-col gap-8">
+<!-- Title using Serif Typography -->
+<input class="w-full bg-transparent border-none focus:ring-0 p-0 font-serif-title text-5xl font-semibold text-[#0e121b] placeholder:text-gray-300 dark:text-white" placeholder="Untitled Note" type="text" value="Monday Thoughts"/>
+<!-- Date/Metadata -->
+<div class="flex items-center gap-4 text-[#506795] text-sm border-b border-[#f1f1f1] pb-6 dark:border-[#1f2937]">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-base">calendar_today</span>
+<span>October 23, 2023</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-base">schedule</span>
+<span>3 min read</span>
+</div>
+</div>
+<!-- Body Content -->
+<div class="prose prose-slate max-w-none">
+<p class="text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] mb-6">
+                            The week starts with clarity and focus on the new roadmap. We need to align the team on the core principles of minimalist UI design. It's not just about stripping elements away; it's about making sure the elements that remain have a clear purpose and a strong visual hierarchy.
+                        </p>
+<p class="text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] mb-6">
+                            Key takeaways from today's brainstorming session:
+                        </p>
+<ul class="list-disc pl-6 space-y-3 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0]">
+<li>Whitespace is a first-class citizen. Give content room to breathe.</li>
+<li>Contrast between Serif headers and Sans-serif body creates a premium journal-like experience.</li>
+<li>Interactive elements should be subtle, avoiding heavy shadows and borders where possible.</li>
+</ul>
+<p class="text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] mt-8">
+                            I've been looking at some classic Swiss design examples and there's so much to learn about grid systems and the mathematical precision of layouts. Moving forward, we should try to implement a more rigid underlying grid while keeping the visual output feeling organic and soft.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Floating Formatting Bar (Minimalist Design) -->
+<div class="fixed bottom-10 left-1/2 -translate-x-1/2 translate-x-[160px] flex items-center bg-white border border-[#e5e7eb] rounded-xl shadow-2xl p-1.5 gap-1 dark:bg-[#1a212f] dark:border-[#2d3748]">
+<button class="p-2 hover:bg-[#e8ebf3] rounded-lg transition-colors dark:hover:bg-[#2d3748]">
+<span class="material-symbols-outlined text-lg">format_bold</span>
+</button>
+<button class="p-2 hover:bg-[#e8ebf3] rounded-lg transition-colors dark:hover:bg-[#2d3748]">
+<span class="material-symbols-outlined text-lg">format_italic</span>
+</button>
+<button class="p-2 hover:bg-[#e8ebf3] rounded-lg transition-colors dark:hover:bg-[#2d3748]">
+<span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+</button>
+<div class="w-px h-6 bg-[#e5e7eb] mx-1 dark:bg-[#2d3748]"></div>
+<button class="p-2 hover:bg-[#e8ebf3] rounded-lg transition-colors dark:hover:bg-[#2d3748]">
+<span class="material-symbols-outlined text-lg">image</span>
+</button>
+<button class="p-2 hover:bg-[#e8ebf3] rounded-lg transition-colors dark:hover:bg-[#2d3748]">
+<span class="material-symbols-outlined text-lg">link</span>
+</button>
+</div>
+</main>
+</div>
+</body></html>

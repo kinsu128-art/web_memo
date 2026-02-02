@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- 2. 초기 관리자 계정 생성 (비밀번호: test123)
 -- bcrypt hash for 'test123' with 10 rounds
 INSERT IGNORE INTO users (id, email, password, name, role) VALUES
-(1, 'test@dklok.com', '$2a$10$PLACEHOLDER_HASH_WILL_BE_UPDATED', '테스트관리자', 'admin');
+(1, 'test@dklok.com', '$2a$10$WJPf3zfP8mRfTNOCbHlWwOXGaKl3.4UxGKP7fKxCJqKZdPLk2m.Ku', '테스트관리자', 'admin');
 
 -- 3. memos 테이블 생성
 CREATE TABLE IF NOT EXISTS memos (
