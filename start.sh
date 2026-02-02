@@ -10,17 +10,22 @@ echo ""
 
 cd "$(dirname "$0")"
 
-echo "[1/3] 도커 컴포즈 시작 중..."
+echo "[1/4] 데이터 디렉토리 확인 중..."
+mkdir -p data/mysql
+chmod 777 data/mysql 2>/dev/null || true
+
+echo ""
+echo "[2/4] 도커 컴포즈 시작 중..."
 docker compose up -d
 
 echo ""
-echo "[2/3] 서비스 상태 확인 중..."
+echo "[3/4] 서비스 상태 확인 중..."
 sleep 5
 
 docker compose ps
 
 echo ""
-echo "[3/3] 브라우저 열기..."
+echo "[4/4] 브라우저 열기..."
 sleep 2
 
 # 자동 IP 감지
