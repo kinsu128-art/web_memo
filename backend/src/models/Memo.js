@@ -9,7 +9,7 @@ class Memo {
     try {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(
-        'SELECT * FROM memos ORDER BY updated_at DESC'
+        'SELECT * FROM memos WHERE is_deleted = FALSE ORDER BY updated_at DESC'
       );
       connection.release();
       return rows;
@@ -99,7 +99,7 @@ class Memo {
   }
 
   /**
-   * 메모 삭제
+   * 메모 삭제 (휴지통으로 이동)
    * @param {number} id 메모 ID
    * @returns {Promise<boolean>} 삭제 성공 여부
    */
@@ -107,7 +107,7 @@ class Memo {
     try {
       const connection = await pool.getConnection();
       const [result] = await connection.query(
-        'DELETE FROM memos WHERE id = ?',
+        'UPDATE memos SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ? AND is_deleted = FALSE',
         [id]
       );
       connection.release();
@@ -119,6 +119,74 @@ class Memo {
       return true;
     } catch (error) {
       console.error('❌ 메모 삭제 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 휴지통 메모 조회
+   * @returns {Promise<Array>} 삭제된 메모 배열
+   */
+  static async findTrash() {
+    try {
+      const connection = await pool.getConnection();
+      const [rows] = await connection.query(
+        'SELECT * FROM memos WHERE is_deleted = TRUE ORDER BY deleted_at DESC'
+      );
+      connection.release();
+      return rows;
+    } catch (error) {
+      console.error('❌ 휴지통 조회 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 메모 복원 (휴지통에서)
+   * @param {number} id 메모 ID
+   * @returns {Promise<Object>} 복원된 메모 객체
+   */
+  static async restore(id) {
+    try {
+      const connection = await pool.getConnection();
+      const [result] = await connection.query(
+        'UPDATE memos SET is_deleted = FALSE, deleted_at = NULL WHERE id = ? AND is_deleted = TRUE',
+        [id]
+      );
+      connection.release();
+
+      if (result.affectedRows === 0) {
+        throw new Error('메모를 찾을 수 없습니다');
+      }
+
+      return this.findById(id);
+    } catch (error) {
+      console.error('❌ 메모 복원 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 메모 완전 삭제
+   * @param {number} id 메모 ID
+   * @returns {Promise<boolean>} 삭제 성공 여부
+   */
+  static async permanentDelete(id) {
+    try {
+      const connection = await pool.getConnection();
+      const [result] = await connection.query(
+        'DELETE FROM memos WHERE id = ? AND is_deleted = TRUE',
+        [id]
+      );
+      connection.release();
+
+      if (result.affectedRows === 0) {
+        throw new Error('메모를 찾을 수 없습니다');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ 메모 완전 삭제 실패:', error);
       throw error;
     }
   }
@@ -174,7 +242,7 @@ class Memo {
     try {
       const connection = await pool.getConnection();
       const [rows] = await connection.query(
-        'SELECT * FROM memos WHERE is_favorite = TRUE ORDER BY updated_at DESC'
+        'SELECT * FROM memos WHERE is_favorite = TRUE AND is_deleted = FALSE ORDER BY updated_at DESC'
       );
       connection.release();
       return rows;

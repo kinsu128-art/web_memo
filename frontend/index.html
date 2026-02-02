@@ -208,7 +208,7 @@
                 </div>
 
                 <!-- Body Content -->
-                <textarea id="memoContent" class="w-full min-h-96 bg-transparent border-none focus:ring-0 p-0 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] resize-none font-mono" placeholder="메모 내용을 입력하세요..." oninput="updateCurrentNote(); updateReadTime()"></textarea>
+                <div id="memoContent" contenteditable="true" class="w-full min-h-96 bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0]" style="white-space: pre-wrap;" oninput="updateCurrentNote(); updateReadTime()"></div>
             </div>
         </div>
     </main>
@@ -217,11 +217,11 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display:none;" onclick="if(event.target.id === 'deleteModal') closeDeleteModal()">
     <div class="bg-white dark:bg-[#1a212f] rounded-xl shadow-2xl p-6 max-w-sm mx-4" onclick="event.stopPropagation()">
-        <h3 class="text-lg font-semibold text-[#0e121b] dark:text-white mb-2">메모를 삭제하시겠습니까?</h3>
-        <p class="text-[#506795] mb-6">이 작업은 되돌릴 수 없습니다.</p>
+        <h3 class="text-lg font-semibold text-[#0e121b] dark:text-white mb-2">휴지통으로 이동하시겠습니까?</h3>
+        <p class="text-[#506795] mb-6">휴지통에서 복원하거나 완전히 삭제할 수 있습니다.</p>
         <div class="flex gap-3 justify-end">
             <button class="px-4 py-2 text-[#506795] hover:bg-[#e8ebf3] dark:hover:bg-[#2d3748] rounded-lg transition-colors" onclick="closeDeleteModal()">취소</button>
-            <button class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors" onclick="confirmDelete()">삭제</button>
+            <button class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors" onclick="confirmDelete()">이동</button>
         </div>
     </div>
 </div>

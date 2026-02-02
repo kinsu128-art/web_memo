@@ -251,3 +251,101 @@ exports.getFavorites = async (req, res) => {
     });
   }
 };
+
+/**
+ * 휴지통 메모 조회
+ */
+exports.getTrash = async (req, res) => {
+  try {
+    const memos = await Memo.findTrash();
+    res.status(200).json({
+      success: true,
+      data: memos,
+      count: memos.length,
+    });
+  } catch (error) {
+    console.error('❌ 휴지통 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '휴지통을 불러올 수 없습니다',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * 메모 복원
+ */
+exports.restoreMemo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: '유효한 메모 ID를 입력해주세요',
+      });
+    }
+
+    const memo = await Memo.restore(id);
+
+    res.status(200).json({
+      success: true,
+      message: '메모가 복원되었습니다',
+      data: memo,
+    });
+  } catch (error) {
+    console.error('❌ 메모 복원 실패:', error);
+
+    if (error.message === '메모를 찾을 수 없습니다') {
+      return res.status(404).json({
+        success: false,
+        message: '메모를 찾을 수 없습니다',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '메모를 복원할 수 없습니다',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * 메모 완전 삭제
+ */
+exports.permanentDeleteMemo = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: '유효한 메모 ID를 입력해주세요',
+      });
+    }
+
+    await Memo.permanentDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: '메모가 완전히 삭제되었습니다',
+    });
+  } catch (error) {
+    console.error('❌ 메모 완전 삭제 실패:', error);
+
+    if (error.message === '메모를 찾을 수 없습니다') {
+      return res.status(404).json({
+        success: false,
+        message: '메모를 찾을 수 없습니다',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: '메모를 삭제할 수 없습니다',
+      error: error.message,
+    });
+  }
+};

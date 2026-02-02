@@ -8,16 +8,22 @@ CREATE TABLE IF NOT EXISTS memos (
     title VARCHAR(255) NOT NULL COMMENT '메모 제목',
     content LONGTEXT NOT NULL COMMENT '메모 내용',
     is_favorite BOOLEAN DEFAULT FALSE COMMENT '즐겨찾기 여부',
+    is_deleted BOOLEAN DEFAULT FALSE COMMENT '삭제 여부 (휴지통)',
+    deleted_at TIMESTAMP NULL COMMENT '삭제 날짜',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성 날짜',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정 날짜',
     INDEX idx_created_at (created_at),
     INDEX idx_updated_at (updated_at),
-    INDEX idx_is_favorite (is_favorite)
+    INDEX idx_is_favorite (is_favorite),
+    INDEX idx_is_deleted (is_deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='메모 저장 테이블';
 
--- 2. 기존 테이블에 is_favorite 컬럼 추가 (존재하지 않을 경우)
+-- 2. 기존 테이블에 컬럼 추가 (존재하지 않을 경우)
 ALTER TABLE memos ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT FALSE COMMENT '즐겨찾기 여부';
+ALTER TABLE memos ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE COMMENT '삭제 여부 (휴지통)';
+ALTER TABLE memos ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL COMMENT '삭제 날짜';
 ALTER TABLE memos ADD INDEX IF NOT EXISTS idx_is_favorite (is_favorite);
+ALTER TABLE memos ADD INDEX IF NOT EXISTS idx_is_deleted (is_deleted);
 
 -- 3. 초기 샘플 데이터 삽입 (테이블이 비어있을 때만)
 -- INSERT IGNORE를 사용하여 중복 삽입 방지

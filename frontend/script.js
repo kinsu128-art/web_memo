@@ -135,7 +135,7 @@ async function selectNote(id) {
             const note = result.data;
 
             memoTitle.value = note.title || '';
-            memoContent.value = note.content || '';
+            memoContent.innerHTML = note.content || '';
 
             // Update date
             const date = new Date(note.updated_at || note.created_at);
@@ -164,7 +164,7 @@ async function selectNote(id) {
 function createNewNote() {
     currentNoteId = null;
     memoTitle.value = '';
-    memoContent.value = '';
+    memoContent.innerHTML = '';
     memoDate.textContent = new Date().toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'long',
@@ -180,7 +180,7 @@ function createNewNote() {
 // Update current note
 async function updateCurrentNote() {
     const title = memoTitle.value.trim();
-    const content = memoContent.value.trim();
+    const content = memoContent.innerHTML.trim();
 
     if (!title || !content) {
         return;
@@ -252,7 +252,7 @@ async function updateCurrentNote() {
 
 // Update read time
 function updateReadTime() {
-    const content = memoContent.value;
+    const content = memoContent.innerText || '';
     const wordCount = content.trim().split(/\s+/).length;
     const readMinutes = Math.max(1, Math.ceil(wordCount / 200));
     memoReadTime.textContent = `${readMinutes}분 읽기`;
@@ -360,13 +360,123 @@ function loadAllNotes() {
 }
 
 // Load trash (recently deleted memos)
-function loadTrash() {
+async function loadTrash() {
     try {
         console.log('🗑️ 휴지통 로드');
-        showNotification('휴지통은 삭제된 메모를 보여줍니다.\n메모를 삭제하면 여기에 나타납니다.\n\n현재 삭제된 메모가 없습니다.', 'error');
+        filterMode = 'trash';
+
+        const response = await fetch('/api/memos/trash/list');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('🗑️ 휴지통 응답:', result);
+
+        if (result.success && Array.isArray(result.data)) {
+            filteredNotes = result.data;
+            renderTrashList();
+            showEmptyState();
+
+            if (filteredNotes.length === 0) {
+                showNotification('휴지통이 비어있습니다');
+            } else {
+                showNotification(`${filteredNotes.length}개의 삭제된 메모`);
+            }
+        }
     } catch (error) {
         console.error('❌ 휴지통 로드 실패:', error);
         showNotification('휴지통을 불러올 수 없습니다', 'error');
+    }
+}
+
+// Render trash list
+function renderTrashList() {
+    notesList.innerHTML = '';
+
+    if (filteredNotes.length === 0) {
+        notesList.innerHTML = '<div class="text-center text-[#506795] py-8">휴지통이 비어있습니다</div>';
+        return;
+    }
+
+    filteredNotes.forEach(note => {
+        const noteElement = createTrashElement(note);
+        notesList.appendChild(noteElement);
+    });
+}
+
+// Create trash item element
+function createTrashElement(note) {
+    const div = document.createElement('div');
+
+    div.className = 'group cursor-pointer p-4 rounded-xl transition-all border hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] border-transparent';
+
+    const deletedDate = new Date(note.deleted_at);
+    const dateStr = formatNoteDate(deletedDate);
+
+    div.innerHTML = `
+        <div class="flex justify-between items-start mb-1">
+            <h3 class="text-[#0e121b] dark:text-white text-base font-semibold leading-tight line-clamp-1 flex-1">${escapeHtml(note.title)}</h3>
+            <div class="flex items-center gap-2 shrink-0">
+                <button class="text-sm text-green-500 hover:text-green-600 transition-colors px-2 py-1 rounded" onclick="event.stopPropagation(); restoreMemo(${note.id})" title="복원">복원</button>
+                <button class="text-sm text-red-500 hover:text-red-600 transition-colors px-2 py-1 rounded" onclick="event.stopPropagation(); permanentDeleteMemo(${note.id})" title="완전 삭제">삭제</button>
+                <span class="text-[11px] text-[#506795] font-medium">${dateStr}</span>
+            </div>
+        </div>
+        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(note.content)}</p>
+    `;
+
+    return div;
+}
+
+// Restore memo from trash
+async function restoreMemo(id) {
+    try {
+        console.log(`♻️ 메모 복원 중: ${id}`);
+        const response = await fetch(`/api/memos/${id}/restore`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('메모가 복원되었습니다');
+            // 전체 메모 목록으로 이동
+            await loadMemos();
+            loadAllNotes();
+        } else {
+            throw new Error(result.message || '복원 실패');
+        }
+    } catch (error) {
+        console.error('❌ 메모 복원 실패:', error);
+        showNotification('메모 복원에 실패했습니다', 'error');
+    }
+}
+
+// Permanently delete memo
+async function permanentDeleteMemo(id) {
+    if (!confirm('정말 완전히 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.')) {
+        return;
+    }
+
+    try {
+        console.log(`🗑️ 메모 완전 삭제 중: ${id}`);
+        const response = await fetch(`/api/memos/${id}/permanent`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification('메모가 완전히 삭제되었습니다');
+            loadTrash();
+        } else {
+            throw new Error(result.message || '삭제 실패');
+        }
+    } catch (error) {
+        console.error('❌ 메모 완전 삭제 실패:', error);
+        showNotification('메모 삭제에 실패했습니다', 'error');
     }
 }
 
@@ -395,7 +505,8 @@ async function confirmDelete() {
 
         if (result.success) {
             closeDeleteModal();
-            showNotification('메모가 삭제되었습니다');
+            showNotification('휴지통으로 이동합니다.');
+            currentNoteId = null;
             loadMemos();
             showEmptyState();
             deleteBtn.style.display = 'none';
@@ -508,66 +619,44 @@ function applyFormat(format) {
         return;
     }
 
-    const textarea = memoContent;
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const selectedText = textarea.value.substring(start, end);
+    memoContent.focus();
 
-    if (!selectedText && format !== 'insertUnorderedList' && format !== 'insertOrderedList') {
+    const selection = window.getSelection();
+    if (!selection.toString() && format !== 'insertUnorderedList' && format !== 'insertOrderedList') {
         showNotification('텍스트를 선택해주세요', 'error');
         return;
     }
-
-    let formattedText = selectedText;
 
     console.log(`📝 포맷팅 적용: ${format}`);
 
     switch (format) {
         case 'bold':
-            formattedText = `**${selectedText}**`;
+            document.execCommand('bold', false, null);
             break;
         case 'italic':
-            formattedText = `*${selectedText}*`;
+            document.execCommand('italic', false, null);
             break;
         case 'underline':
-            formattedText = `__${selectedText}__`;
+            document.execCommand('underline', false, null);
             break;
         case 'strikethrough':
-            formattedText = `~~${selectedText}~~`;
+            document.execCommand('strikeThrough', false, null);
             break;
         case 'insertUnorderedList':
-            if (selectedText) {
-                formattedText = selectedText.split('\n').map(line => `- ${line.trim()}`).filter(l => l !== '-').join('\n');
-            } else {
-                formattedText = '- 항목';
-            }
+            document.execCommand('insertUnorderedList', false, null);
             break;
         case 'insertOrderedList':
-            if (selectedText) {
-                formattedText = selectedText.split('\n').map((line, i) => `${i + 1}. ${line.trim()}`).filter(l => !l.match(/^\\d+\\. $/)).join('\n');
-            } else {
-                formattedText = '1. 항목';
-            }
+            document.execCommand('insertOrderedList', false, null);
             break;
         default:
             console.warn(`⚠️  알 수 없는 포맷: ${format}`);
             return;
     }
 
-    // Replace selected text
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-    textarea.value = before + formattedText + after;
-
-    console.log(`✅ 포맷팅 완료: ${formattedText.substring(0, 50)}`);
+    console.log(`✅ 포맷팅 완료`);
 
     // Update note
     updateCurrentNote();
-
-    // Restore focus and selection
-    textarea.focus();
-    const newEnd = start + formattedText.length;
-    textarea.setSelectionRange(start, newEnd);
 }
 
 function insertCode() {
@@ -576,20 +665,18 @@ function insertCode() {
         return;
     }
 
-    const textarea = memoContent;
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const selectedText = textarea.value.substring(start, end);
+    memoContent.focus();
+    const selection = window.getSelection();
+    const selectedText = selection.toString();
 
-    const codeBlock = selectedText ? `\`\`\`\n${selectedText}\n\`\`\`` : '```\n코드를 입력하세요\n```';
+    const codeHtml = selectedText
+        ? `<pre style="background:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;">${selectedText}</pre>`
+        : '<pre style="background:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;">코드를 입력하세요</pre>';
 
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-    textarea.value = before + codeBlock + after;
+    document.execCommand('insertHTML', false, codeHtml);
 
     console.log('📝 코드 블록 삽입됨');
     updateCurrentNote();
-    textarea.focus();
 }
 
 function insertQuote() {
@@ -598,20 +685,18 @@ function insertQuote() {
         return;
     }
 
-    const textarea = memoContent;
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const selectedText = textarea.value.substring(start, end);
+    memoContent.focus();
+    const selection = window.getSelection();
+    const selectedText = selection.toString();
 
-    const quoteBlock = selectedText ? selectedText.split('\n').map(line => `> ${line}`).join('\n') : '> 인용구를 입력하세요';
+    const quoteHtml = selectedText
+        ? `<blockquote style="border-left:4px solid #2060df;padding-left:15px;margin:10px 0;color:#666;">${selectedText}</blockquote>`
+        : '<blockquote style="border-left:4px solid #2060df;padding-left:15px;margin:10px 0;color:#666;">인용구를 입력하세요</blockquote>';
 
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-    textarea.value = before + quoteBlock + after;
+    document.execCommand('insertHTML', false, quoteHtml);
 
     console.log('📝 인용구 삽입됨');
     updateCurrentNote();
-    textarea.focus();
 }
 
 function applyColor(color) {
@@ -622,26 +707,18 @@ function applyColor(color) {
         return;
     }
 
-    const textarea = memoContent;
-    const start = textarea.selectionStart || 0;
-    const end = textarea.selectionEnd || 0;
-    const selectedText = textarea.value.substring(start, end);
+    memoContent.focus();
+    const selection = window.getSelection();
 
-    if (!selectedText) {
+    if (!selection.toString()) {
         showNotification('텍스트를 선택해주세요', 'error');
         return;
     }
 
-    // 간단한 마크다운 스타일 색상 표현
-    const coloredText = `[${selectedText}](color:${color})`;
-
-    const before = textarea.value.substring(0, start);
-    const after = textarea.value.substring(end);
-    textarea.value = before + coloredText + after;
+    document.execCommand('foreColor', false, color);
 
     console.log(`🎨 색상 적용: ${color}`);
     updateCurrentNote();
-    textarea.focus();
 
     // Reset select
     const colorSelect = document.getElementById('textColor');
@@ -656,34 +733,43 @@ function clearFormatting() {
         return;
     }
 
-    if (confirm('정말 모든 내용을 삭제하시겠습니까?')) {
-        memoContent.value = '';
+    memoContent.focus();
+    const selection = window.getSelection();
+
+    if (selection.toString()) {
+        document.execCommand('removeFormat', false, null);
+        showNotification('서식이 제거되었습니다');
+    } else if (confirm('정말 모든 내용을 삭제하시겠습니까?')) {
+        memoContent.innerHTML = '';
         updateCurrentNote();
         showNotification('내용이 삭제되었습니다');
-        memoContent.focus();
     }
+    memoContent.focus();
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
     if (!memoContent) return;
 
-    const isFocused = document.activeElement === memoContent;
+    const isFocused = memoContent.contains(document.activeElement) || document.activeElement === memoContent;
     if (!isFocused) return;
 
     if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
             case 'b':
                 e.preventDefault();
-                applyFormat('bold');
+                document.execCommand('bold', false, null);
+                updateCurrentNote();
                 break;
             case 'i':
                 e.preventDefault();
-                applyFormat('italic');
+                document.execCommand('italic', false, null);
+                updateCurrentNote();
                 break;
             case 'u':
                 e.preventDefault();
-                applyFormat('underline');
+                document.execCommand('underline', false, null);
+                updateCurrentNote();
                 break;
         }
     }

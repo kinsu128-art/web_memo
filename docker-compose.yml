@@ -4,7 +4,7 @@ services:
     image: mysql:8.0
     container_name: memo_db
     restart: unless-stopped
-    user: "${UID:-1000}:${GID:-1000}"
+    # user: "${UID:-1000}:${GID:-1000}"  # Windows에서는 주석 처리
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-memos_db}
