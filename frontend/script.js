@@ -20,17 +20,54 @@ let saveTimeout = null;
 let filterMode = 'all'; // 'all' 또는 'favorites'
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('📱 페이지 로드됨');
     console.log('API URL: /api/memos');
+
+    // 인증 체크
+    if (typeof requireAuth === 'function') {
+        const isAuthenticated = await requireAuth();
+        if (!isAuthenticated) {
+            console.log('🔒 인증 필요 - 로그인 페이지로 이동');
+            return;
+        }
+
+        // 사용자 정보 표시
+        updateUserInfo();
+    }
+
     loadMemos();
 });
+
+// 사용자 정보 업데이트
+function updateUserInfo() {
+    if (typeof TokenManager !== 'undefined') {
+        const user = TokenManager.getUser();
+        if (user) {
+            const userNameEl = document.getElementById('userName');
+            const adminLinkEl = document.getElementById('adminLink');
+
+            if (userNameEl) {
+                userNameEl.textContent = user.name || user.email;
+            }
+
+            // 관리자인 경우 관리 링크 표시
+            if (adminLinkEl && user.role === 'admin') {
+                adminLinkEl.style.display = 'flex';
+            }
+        }
+    }
+}
 
 // Load all memos from API
 async function loadMemos() {
     try {
         console.log('📥 메모 로드 시작...');
-        const response = await fetch('/api/memos');
+        const response = typeof authFetch === 'function'
+            ? await authFetch('/api/memos')
+            : await fetch('/api/memos');
+
+        if (!response) return;
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -121,7 +158,11 @@ function createNoteElement(note) {
 async function selectNote(id) {
     try {
         console.log(`📖 메모 로드 중: ${id}`);
-        const response = await fetch(`/api/memos/${id}`);
+        const response = typeof authFetch === 'function'
+            ? await authFetch(`/api/memos/${id}`)
+            : await fetch(`/api/memos/${id}`);
+
+        if (!response) return;
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -205,11 +246,18 @@ async function updateCurrentNote() {
 
             console.log(`💾 메모 저장: ${isNewNote ? '새로 생성' : '수정'} - ${url}`);
 
-            response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, content })
-            });
+            response = typeof authFetch === 'function'
+                ? await authFetch(url, {
+                    method: method,
+                    body: JSON.stringify({ title, content })
+                })
+                : await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+
+            if (!response) return;
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -287,10 +335,14 @@ function handleSearch(searchTerm) {
 async function toggleFavorite(id) {
     try {
         console.log(`⭐ 즐겨찾기 토글: ${id}`);
-        const response = await fetch(`/api/memos/${id}/favorite`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' }
-        });
+        const response = typeof authFetch === 'function'
+            ? await authFetch(`/api/memos/${id}/favorite`, { method: 'PUT' })
+            : await fetch(`/api/memos/${id}/favorite`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+        if (!response) return;
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -365,7 +417,11 @@ async function loadTrash() {
         console.log('🗑️ 휴지통 로드');
         filterMode = 'trash';
 
-        const response = await fetch('/api/memos/trash/list');
+        const response = typeof authFetch === 'function'
+            ? await authFetch('/api/memos/trash/list')
+            : await fetch('/api/memos/trash/list');
+
+        if (!response) return;
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -434,9 +490,11 @@ function createTrashElement(note) {
 async function restoreMemo(id) {
     try {
         console.log(`♻️ 메모 복원 중: ${id}`);
-        const response = await fetch(`/api/memos/${id}/restore`, {
-            method: 'PUT'
-        });
+        const response = typeof authFetch === 'function'
+            ? await authFetch(`/api/memos/${id}/restore`, { method: 'PUT' })
+            : await fetch(`/api/memos/${id}/restore`, { method: 'PUT' });
+
+        if (!response) return;
 
         const result = await response.json();
 
@@ -462,9 +520,11 @@ async function permanentDeleteMemo(id) {
 
     try {
         console.log(`🗑️ 메모 완전 삭제 중: ${id}`);
-        const response = await fetch(`/api/memos/${id}/permanent`, {
-            method: 'DELETE'
-        });
+        const response = typeof authFetch === 'function'
+            ? await authFetch(`/api/memos/${id}/permanent`, { method: 'DELETE' })
+            : await fetch(`/api/memos/${id}/permanent`, { method: 'DELETE' });
+
+        if (!response) return;
 
         const result = await response.json();
 
@@ -497,9 +557,11 @@ async function confirmDelete() {
     if (!currentNoteId) return;
 
     try {
-        const response = await fetch(`/api/memos/${currentNoteId}`, {
-            method: 'DELETE'
-        });
+        const response = typeof authFetch === 'function'
+            ? await authFetch(`/api/memos/${currentNoteId}`, { method: 'DELETE' })
+            : await fetch(`/api/memos/${currentNoteId}`, { method: 'DELETE' });
+
+        if (!response) return;
 
         const result = await response.json();
 

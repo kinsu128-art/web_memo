@@ -7,10 +7,14 @@ RUN rm /etc/nginx/conf.d/default.conf
 # 커스텀 Nginx 설정 복사
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 웹 페이지 파일만 복사 (HTML, CSS, JS만)
+# 웹 페이지 파일 복사 (HTML, CSS, JS)
 COPY index.html /usr/share/nginx/html/
+COPY login.html /usr/share/nginx/html/
+COPY admin.html /usr/share/nginx/html/
 COPY styles.css /usr/share/nginx/html/
 COPY script.js /usr/share/nginx/html/
+COPY auth.js /usr/share/nginx/html/
+COPY admin.js /usr/share/nginx/html/
 
 # 포트 80 노출
 EXPOSE 80

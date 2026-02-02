@@ -5,7 +5,7 @@ const Memo = require('../models/Memo');
  */
 exports.getAllMemos = async (req, res) => {
   try {
-    const memos = await Memo.findAll();
+    const memos = await Memo.findAll(req.user.id);
     res.status(200).json({
       success: true,
       data: memos,
@@ -35,7 +35,7 @@ exports.getMemoById = async (req, res) => {
       });
     }
 
-    const memo = await Memo.findById(id);
+    const memo = await Memo.findById(id, req.user.id);
 
     if (!memo) {
       return res.status(404).json({
@@ -80,7 +80,7 @@ exports.createMemo = async (req, res) => {
       });
     }
 
-    const memo = await Memo.create(title.trim(), content.trim());
+    const memo = await Memo.create(title.trim(), content.trim(), req.user.id);
 
     res.status(201).json({
       success: true,
@@ -127,7 +127,7 @@ exports.updateMemo = async (req, res) => {
       });
     }
 
-    const memo = await Memo.update(id, title.trim(), content.trim());
+    const memo = await Memo.update(id, title.trim(), content.trim(), req.user.id);
 
     res.status(200).json({
       success: true,
@@ -167,7 +167,7 @@ exports.deleteMemo = async (req, res) => {
       });
     }
 
-    await Memo.delete(id);
+    await Memo.delete(id, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -206,7 +206,7 @@ exports.toggleFavorite = async (req, res) => {
       });
     }
 
-    const memo = await Memo.toggleFavorite(id);
+    const memo = await Memo.toggleFavorite(id, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -236,7 +236,7 @@ exports.toggleFavorite = async (req, res) => {
  */
 exports.getFavorites = async (req, res) => {
   try {
-    const memos = await Memo.findFavorites();
+    const memos = await Memo.findFavorites(req.user.id);
     res.status(200).json({
       success: true,
       data: memos,
@@ -257,7 +257,7 @@ exports.getFavorites = async (req, res) => {
  */
 exports.getTrash = async (req, res) => {
   try {
-    const memos = await Memo.findTrash();
+    const memos = await Memo.findTrash(req.user.id);
     res.status(200).json({
       success: true,
       data: memos,
@@ -287,7 +287,7 @@ exports.restoreMemo = async (req, res) => {
       });
     }
 
-    const memo = await Memo.restore(id);
+    const memo = await Memo.restore(id, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -326,7 +326,7 @@ exports.permanentDeleteMemo = async (req, res) => {
       });
     }
 
-    await Memo.permanentDelete(id);
+    await Memo.permanentDelete(id, req.user.id);
 
     res.status(200).json({
       success: true,

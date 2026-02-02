@@ -3,14 +3,14 @@
 clear
 
 echo ""
-echo "╔═══════════════════════════════════════╗"
-echo "║   메모관리 앱 - 재빌드               ║"
-echo "╚═══════════════════════════════════════╝"
+echo "========================================="
+echo "   메모관리 앱 - 재빌드"
+echo "========================================="
 echo ""
 
 cd "$(dirname "$0")"
 
-echo "⚠️  주의: 이 작업은 시간이 걸릴 수 있습니다."
+echo "주의: 이 작업은 시간이 걸릴 수 있습니다."
 echo ""
 echo "선택:"
 echo "1. 재빌드 (데이터 유지) - 권장"
@@ -31,7 +31,7 @@ elif [[ "$choice" == "1" ]]; then
 
     echo ""
     echo "[2/4] 이미지 삭제 중..."
-    docker rmi web_memo-frontend web_memo-backend 2>/dev/null || true
+    docker rmi memo_web-frontend memo_web-backend 2>/dev/null || true
 
     echo ""
     echo "[3/4] 이미지 재빌드 중..."
@@ -51,24 +51,19 @@ elif [[ "$choice" == "2" ]]; then
     fi
 
     echo ""
-    echo "[1/5] 서비스 중지 및 볼륨 삭제 중..."
+    echo "[1/4] 서비스 중지 및 볼륨 삭제 중..."
     docker compose down -v
 
     echo ""
-    echo "[2/5] 데이터 디렉토리 삭제 중..."
-    sudo rm -rf data/
+    echo "[2/4] 이미지 삭제 중..."
+    docker rmi memo_web-frontend memo_web-backend 2>/dev/null || true
 
     echo ""
-    echo "[3/5] 이미지 삭제 중..."
-    docker rmi web_memo-frontend web_memo-backend 2>/dev/null || true
-
-    echo ""
-    echo "[4/5] 이미지 재빌드 중..."
+    echo "[3/4] 이미지 재빌드 중..."
     docker compose build --no-cache
 
     echo ""
-    echo "[5/5] 데이터 디렉토리 생성 및 서비스 시작..."
-    mkdir -p data/mysql
+    echo "[4/4] 서비스 시작 중..."
     docker compose up -d
 else
     echo "잘못된 선택입니다."
@@ -76,7 +71,7 @@ else
 fi
 
 echo ""
-echo "✅ 재빌드 완료!"
+echo "재빌드 완료!"
 echo ""
 sleep 10
 docker compose ps

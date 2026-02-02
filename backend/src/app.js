@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const memoRoutes = require('./routes/memos');
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,8 +36,14 @@ app.use((req, res, next) => {
 // 라우트 설정
 // =====================
 
-// API 라우트
-app.use('/api/memos', memoRoutes);
+// 인증 라우트 (공개)
+app.use('/api/auth', authRoutes);
+
+// 사용자 관리 라우트 (관리자 전용 - 미들웨어에서 인증 처리)
+app.use('/api/users', userRoutes);
+
+// 메모 라우트 (인증 필요)
+app.use('/api/memos', authMiddleware, memoRoutes);
 
 // 헬스 체크 엔드포인트
 app.get('/health', (req, res) => {
@@ -48,8 +57,10 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).json({
     message: '메모관리 API 서버',
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
       memos: '/api/memos',
       health: '/health',
     },
@@ -94,12 +105,15 @@ app.listen(PORT, () => {
 ╚════════════════════════════════════╝
   `);
   console.log('📌 사용 가능한 엔드포인트:');
-  console.log('   GET    /api/memos      - 메모 목록 조회');
-  console.log('   GET    /api/memos/:id  - 메모 상세 조회');
-  console.log('   POST   /api/memos      - 메모 생성');
-  console.log('   PUT    /api/memos/:id  - 메모 수정');
-  console.log('   DELETE /api/memos/:id  - 메모 삭제');
-  console.log('   GET    /health         - 헬스 체크');
+  console.log('   POST   /api/auth/login    - 로그인');
+  console.log('   POST   /api/auth/logout   - 로그아웃');
+  console.log('   GET    /api/auth/me       - 내 정보 조회');
+  console.log('   PUT    /api/auth/password - 비밀번호 변경');
+  console.log('   GET    /api/users         - 사용자 목록 (관리자)');
+  console.log('   POST   /api/users         - 사용자 생성 (관리자)');
+  console.log('   GET    /api/memos         - 메모 목록 조회');
+  console.log('   POST   /api/memos         - 메모 생성');
+  console.log('   GET    /health            - 헬스 체크');
 });
 
 module.exports = app;

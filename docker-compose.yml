@@ -14,7 +14,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./data/mysql:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - memo_network
@@ -44,6 +44,8 @@ services:
       DB_USER: ${DB_USER:-memouser}
       DB_PASSWORD: ${DB_PASSWORD:-memopass}
       PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-memo-app-secret-key-2024}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
     ports:
       - "3000:3000"
     depends_on:
@@ -74,3 +76,6 @@ services:
 networks:
   memo_network:
     driver: bridge
+
+volumes:
+  mysql_data:

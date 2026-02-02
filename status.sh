@@ -3,9 +3,9 @@
 clear
 
 echo ""
-echo "╔═══════════════════════════════════════╗"
-echo "║   메모관리 앱 - 상태 확인             ║"
-echo "╚═══════════════════════════════════════╝"
+echo "========================================="
+echo "   메모관리 앱 - 상태 확인"
+echo "========================================="
 echo ""
 
 cd "$(dirname "$0")"
@@ -25,10 +25,10 @@ echo ""
 echo "[*] API 테스트:"
 echo ""
 
-if curl -s http://localhost:3000/api/memos | grep -q "success"; then
-    echo "✅ 백엔드: 정상 (HTTP 응답 확인)"
+if curl -s http://localhost/api/auth/login > /dev/null 2>&1; then
+    echo "백엔드: 정상"
 else
-    echo "❌ 백엔드: 응답 없음"
+    echo "백엔드: 응답 없음 (인증 필요할 수 있음)"
 fi
 
 echo ""
