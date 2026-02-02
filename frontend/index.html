@@ -1,118 +1,180 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html class="light" lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>메모관리 - 간단한 메모 저장소</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>메모관리 - Minimal Notepad</title>
+    <!-- Google Fonts: Inter for UI/Body, Playfair Display for Serif Titles -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet"/>
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2060df",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#111621",
+                        "editor-bg": "#ffffff",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "serif-title": ["Playfair Display", "serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #374151;
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <!-- 헤더 -->
-        <header class="header">
-            <h1>📝 메모관리</h1>
-            <p class="subtitle">간단하고 빠른 메모 저장소</p>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#0e121b] antialiased">
+<div class="flex h-screen w-full overflow-hidden">
+    <!-- SideNavBar (Thin Global Nav) -->
+    <nav class="flex w-20 flex-col items-center border-r border-[#e5e7eb] bg-background-light py-6 dark:border-[#1f2937] dark:bg-background-dark shrink-0">
+        <div class="mb-10">
+            <div class="size-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined">edit_note</span>
+            </div>
+        </div>
+        <div class="flex flex-col gap-6 flex-1">
+            <button class="flex flex-col items-center gap-1 text-primary group" title="모든 메모">
+                <span class="material-symbols-outlined active-nav-icon text-2xl">inbox</span>
+                <span class="text-[10px] font-semibold uppercase tracking-wider">Notes</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group" title="즐겨찾기" onclick="alert('준비 중입니다')">
+                <span class="material-symbols-outlined text-2xl">star</span>
+                <span class="text-[10px] font-semibold uppercase tracking-wider">Favs</span>
+            </button>
+            <button class="flex flex-col items-center gap-1 text-[#506795] hover:text-primary transition-colors group" title="휴지통" onclick="alert('준비 중입니다')">
+                <span class="material-symbols-outlined text-2xl">delete</span>
+                <span class="text-[10px] font-semibold uppercase tracking-wider">Trash</span>
+            </button>
+        </div>
+        <div class="mt-auto">
+            <button class="size-10 rounded-full bg-cover bg-center border-2 border-white shadow-sm hover:opacity-80 transition-opacity flex items-center justify-center" title="다크/라이트 모드 전환" onclick="toggleDarkMode()">
+                <span class="material-symbols-outlined text-gray-600 dark:text-gray-300 text-2xl">brightness_4</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Note List Sidebar -->
+    <aside class="w-80 border-r border-[#e5e7eb] bg-[#fcfcfd] flex flex-col dark:border-[#1f2937] dark:bg-[#151b28] shrink-0">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold tracking-tight">모든 메모</h2>
+                <button class="p-1 hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] rounded-lg transition-colors" onclick="document.getElementById('searchInput').focus()">
+                    <span class="material-symbols-outlined text-[#506795]">search</span>
+                </button>
+            </div>
+
+            <!-- Search Input -->
+            <div class="mb-4">
+                <input type="text" id="searchInput" placeholder="메모 검색..." class="w-full px-3 py-2 bg-white dark:bg-[#1f2937] border border-[#e5e7eb] dark:border-[#2d3748] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" oninput="handleSearch(this.value)">
+            </div>
+
+            <div id="notesList" class="space-y-1 overflow-y-auto custom-scrollbar h-[calc(100vh-220px)]">
+                <!-- Notes will be inserted here by JavaScript -->
+                <div class="text-center text-[#506795] py-8">로딩 중...</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content (Editor) -->
+    <main class="flex-1 bg-editor-bg flex flex-col dark:bg-[#0b0f18]">
+        <!-- ToolBar / Header -->
+        <header class="flex items-center justify-between px-8 py-4 bg-editor-bg/80 backdrop-blur-md sticky top-0 z-10 dark:bg-[#0b0f18]/80">
+            <div class="flex items-center gap-2 text-[#506795]">
+                <span class="material-symbols-outlined text-primary text-xl" id="saveStatus">cloud_done</span>
+                <span class="text-sm font-medium" id="saveText">저장됨</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="p-2 text-[#506795] hover:bg-background-light dark:hover:bg-[#1f2937] rounded-lg transition-colors" title="새 메모" onclick="createNewNote()">
+                    <span class="material-symbols-outlined">add</span>
+                </button>
+                <button class="p-2 text-[#506795] hover:bg-background-light dark:hover:bg-[#1f2937] rounded-lg transition-colors" title="메모 삭제" id="deleteBtn" onclick="openDeleteModal()" style="display:none;">
+                    <span class="material-symbols-outlined">delete</span>
+                </button>
+            </div>
         </header>
 
-        <!-- 메인 콘텐츠 -->
-        <main class="main-content">
-            <!-- 좌측: 메모 목록 -->
-            <section class="memo-list-section">
-                <div class="section-header">
-                    <h2>메모 목록</h2>
-                    <button class="btn-refresh" id="refreshBtn" title="새로고침">🔄</button>
-                </div>
-
-                <!-- 검색 입력창 -->
-                <div class="search-box">
-                    <input
-                        type="text"
-                        id="searchInput"
-                        class="search-input"
-                        placeholder="메모 검색 (제목/내용)..."
-                    >
-                    <button class="btn-search-clear" id="searchClearBtn" title="검색 초기화" style="display: none;">✕</button>
-                </div>
-
-                <div id="memoList" class="memo-list">
-                    <div class="loading">로딩 중...</div>
-                </div>
-            </section>
-
-            <!-- 우측: 메모 상세/생성 -->
-            <section class="memo-detail-section">
-                <div class="section-header">
-                    <h2 id="detailTitle">새 메모 작성</h2>
-                    <button class="btn-clear" id="clearBtn" title="초기화" style="display: none;">✕</button>
-                </div>
-
-                <form id="memoForm" class="memo-form">
-                    <div class="form-group">
-                        <label for="title">제목</label>
-                        <input
-                            type="text"
-                            id="title"
-                            placeholder="메모 제목을 입력하세요"
-                            required
-                            maxlength="255"
-                        >
-                        <small id="titleCount" class="char-count">0/255</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="content">내용</label>
-                        <textarea
-                            id="content"
-                            placeholder="메모 내용을 입력하세요"
-                            rows="12"
-                            required
-                        ></textarea>
-                        <small id="contentCount" class="char-count">0자</small>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="submitBtn">저장</button>
-                        <button type="button" class="btn btn-secondary" id="cancelBtn" style="display: none;">취소</button>
-                    </div>
-                </form>
-
-                <div id="message" class="message"></div>
-            </section>
-        </main>
-
-        <!-- 푸터 -->
-        <footer class="footer">
-            <p>© 2024 메모관리 앱 | 언제 어디서나 메모를 저장하세요</p>
-        </footer>
-    </div>
-
-    <!-- 메모 항목 템플릿 -->
-    <template id="memoItemTemplate">
-        <div class="memo-item" data-id="">
-            <div class="memo-item-header">
-                <h3 class="memo-title"></h3>
-                <span class="memo-date"></span>
+        <!-- Editor Space -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-12 md:px-24 lg:px-32 py-12 max-w-5xl mx-auto w-full" id="editorArea">
+            <!-- Empty State -->
+            <div id="emptyState" class="flex flex-col items-center justify-center h-full text-center py-12">
+                <span class="material-symbols-outlined text-6xl text-[#506795] mb-4">note_add</span>
+                <h2 class="text-2xl font-semibold text-[#0e121b] dark:text-white mb-2">메모가 없습니다</h2>
+                <p class="text-[#506795] mb-6">새로운 메모를 만들어 시작하세요</p>
+                <button class="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-md shadow-primary/20" onclick="createNewNote()">
+                    <span class="material-symbols-outlined">add</span>
+                    <span>새 메모 만들기</span>
+                </button>
             </div>
-            <p class="memo-preview"></p>
-            <div class="memo-actions">
-                <button class="btn-edit" title="수정">✏️</button>
-                <button class="btn-delete" title="삭제">🗑️</button>
+
+            <!-- Editor Content (Hidden by default) -->
+            <div id="editorContent" style="display:none;" class="flex flex-col gap-8">
+                <!-- Title using Serif Typography -->
+                <input id="memoTitle" class="w-full bg-transparent border-none focus:ring-0 p-0 font-serif-title text-5xl font-semibold text-[#0e121b] placeholder:text-gray-300 dark:text-white" placeholder="제목 없는 메모" type="text" oninput="updateCurrentNote()"/>
+
+                <!-- Date/Metadata -->
+                <div class="flex items-center gap-4 text-[#506795] text-sm border-b border-[#f1f1f1] dark:border-[#1f2937] pb-6">
+                    <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-base">calendar_today</span>
+                        <span id="memoDate">아직 저장 안 됨</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-base">schedule</span>
+                        <span id="memoReadTime">0분 읽기</span>
+                    </div>
+                </div>
+
+                <!-- Body Content -->
+                <textarea id="memoContent" class="w-full min-h-96 bg-transparent border-none focus:ring-0 p-0 text-xl leading-relaxed text-[#3d4a6b] dark:text-[#a0aec0] resize-none" placeholder="메모 내용을 입력하세요..." oninput="updateCurrentNote(); updateReadTime()"></textarea>
             </div>
         </div>
-    </template>
+    </main>
+</div>
 
-    <!-- 확인 다이얼로그 -->
-    <div id="confirmDialog" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>메모 삭제</h3>
-            <p id="confirmMessage">이 메모를 삭제하시겠습니까?</p>
-            <div class="modal-actions">
-                <button class="btn btn-danger" id="confirmBtn">삭제</button>
-                <button class="btn btn-secondary" id="cancelConfirmBtn">취소</button>
-            </div>
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display:none;">
+    <div class="bg-white dark:bg-[#1a212f] rounded-xl shadow-2xl p-6 max-w-sm mx-4">
+        <h3 class="text-lg font-semibold text-[#0e121b] dark:text-white mb-2">메모를 삭제하시겠습니까?</h3>
+        <p class="text-[#506795] mb-6">이 작업은 되돌릴 수 없습니다.</p>
+        <div class="flex gap-3 justify-end">
+            <button class="px-4 py-2 text-[#506795] hover:bg-[#e8ebf3] dark:hover:bg-[#2d3748] rounded-lg transition-colors" onclick="closeDeleteModal()">취소</button>
+            <button class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors" onclick="confirmDelete()">삭제</button>
         </div>
     </div>
+</div>
 
-    <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

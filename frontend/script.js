@@ -1,550 +1,356 @@
-// =====================
-// API 설정
-// =====================
-
-const API_URL = '/api/memos';
-
-// =====================
-// 상태 관리
-// =====================
-
-let currentMemoId = null;
-let memos = [];
-
-// =====================
-// DOM 요소
-// =====================
-
-const memoList = document.getElementById('memoList');
-const memoForm = document.getElementById('memoForm');
-const titleInput = document.getElementById('title');
-const contentInput = document.getElementById('content');
-const submitBtn = document.getElementById('submitBtn');
-const cancelBtn = document.getElementById('cancelBtn');
-const clearBtn = document.getElementById('clearBtn');
-const refreshBtn = document.getElementById('refreshBtn');
-const detailTitle = document.getElementById('detailTitle');
-const messageDiv = document.getElementById('message');
-const titleCount = document.getElementById('titleCount');
-const contentCount = document.getElementById('contentCount');
-const confirmDialog = document.getElementById('confirmDialog');
-const confirmBtn = document.getElementById('confirmBtn');
-const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-const confirmMessage = document.getElementById('confirmMessage');
-const memoItemTemplate = document.getElementById('memoItemTemplate');
+// DOM Elements
+const notesList = document.getElementById('notesList');
+const editorContent = document.getElementById('editorContent');
+const emptyState = document.getElementById('emptyState');
+const memoTitle = document.getElementById('memoTitle');
+const memoContent = document.getElementById('memoContent');
+const memoDate = document.getElementById('memoDate');
+const memoReadTime = document.getElementById('memoReadTime');
+const saveStatus = document.getElementById('saveStatus');
+const saveText = document.getElementById('saveText');
+const deleteBtn = document.getElementById('deleteBtn');
+const deleteModal = document.getElementById('deleteModal');
 const searchInput = document.getElementById('searchInput');
-const searchClearBtn = document.getElementById('searchClearBtn');
 
-// =====================
-// 초기화
-// =====================
+// State
+let allNotes = [];
+let filteredNotes = [];
+let currentNoteId = null;
+let saveTimeout = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadMemos();
-    setupEventListeners();
-});
+// Initialize
+document.addEventListener('DOMContentLoaded', loadMemos);
 
-// =====================
-// 이벤트 리스너 설정
-// =====================
-
-function setupEventListeners() {
-    // 폼 이벤트
-    memoForm.addEventListener('submit', handleFormSubmit);
-    cancelBtn.addEventListener('click', handleCancel);
-    clearBtn.addEventListener('click', handleClear);
-
-    // 새로고침 버튼
-    refreshBtn.addEventListener('click', loadMemos);
-
-    // 입력 필드 이벤트
-    titleInput.addEventListener('input', updateTitleCount);
-    contentInput.addEventListener('input', updateContentCount);
-
-    // 검색 이벤트
-    searchInput.addEventListener('input', handleSearch);
-    searchClearBtn.addEventListener('click', clearSearch);
-
-    // 확인 다이얼로그
-    confirmBtn.addEventListener('click', handleConfirmDelete);
-    cancelConfirmBtn.addEventListener('click', closeConfirmDialog);
-
-    // 엔터 키로 새로운 메모 생성 (Ctrl+Enter)
-    contentInput.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'Enter') {
-            memoForm.dispatchEvent(new Event('submit'));
-        }
-    });
-}
-
-// =====================
-// API 함수
-// =====================
-
-/**
- * 모든 메모 조회
- */
+// Load all memos from API
 async function loadMemos() {
     try {
-        memoList.innerHTML = '<div class="loading">로딩 중...</div>';
-        const response = await fetch(API_URL);
+        const response = await fetch('/api/memos');
         const result = await response.json();
 
         if (result.success) {
-            memos = result.data;
-            renderMemoList();
-        } else {
-            showMessage('메모를 불러올 수 없습니다', 'error');
+            allNotes = result.data;
+            filteredNotes = allNotes;
+            renderNotesList();
+
+            if (allNotes.length === 0) {
+                showEmptyState();
+            }
         }
     } catch (error) {
         console.error('❌ 메모 로드 실패:', error);
-        memoList.innerHTML = '<div class="loading" style="color: #ff6b6b;">메모를 불러올 수 없습니다</div>';
-        showMessage('서버에 연결할 수 없습니다', 'error');
+        showNotification('메모를 불러올 수 없습니다', 'error');
     }
 }
 
-/**
- * 메모 생성
- */
-async function createMemo(title, content) {
-    try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ title, content }),
-        });
+// Render notes list
+function renderNotesList() {
+    notesList.innerHTML = '';
 
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage('메모가 생성되었습니다', 'success');
-            resetForm();
-            await loadMemos();
-        } else {
-            showMessage(result.message || '메모를 생성할 수 없습니다', 'error');
-        }
-    } catch (error) {
-        console.error('❌ 메모 생성 실패:', error);
-        showMessage('서버에 연결할 수 없습니다', 'error');
-    }
-}
-
-/**
- * 메모 수정
- */
-async function updateMemo(id, title, content) {
-    try {
-        const response = await fetch(`${API_URL}/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ title, content }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage('메모가 수정되었습니다', 'success');
-            currentMemoId = null;
-            resetForm();
-            await loadMemos();
-        } else {
-            showMessage(result.message || '메모를 수정할 수 없습니다', 'error');
-        }
-    } catch (error) {
-        console.error('❌ 메모 수정 실패:', error);
-        showMessage('서버에 연결할 수 없습니다', 'error');
-    }
-}
-
-/**
- * 메모 삭제
- */
-async function deleteMemo(id) {
-    try {
-        const response = await fetch(`${API_URL}/${id}`, {
-            method: 'DELETE',
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            showMessage('메모가 삭제되었습니다', 'success');
-            currentMemoId = null;
-            resetForm();
-            await loadMemos();
-        } else {
-            showMessage(result.message || '메모를 삭제할 수 없습니다', 'error');
-        }
-    } catch (error) {
-        console.error('❌ 메모 삭제 실패:', error);
-        showMessage('서버에 연결할 수 없습니다', 'error');
-    }
-}
-
-/**
- * 메모 상세 조회
- */
-function getMemoById(id) {
-    return memos.find(memo => memo.id === id);
-}
-
-// =====================
-// UI 렌더링
-// =====================
-
-/**
- * 메모 목록 렌더링
- */
-function renderMemoList() {
-    if (memos.length === 0) {
-        memoList.innerHTML = '<div class="loading" style="padding: 60px 20px; color: #999;">메모가 없습니다. 새로 작성해보세요!</div>';
+    if (filteredNotes.length === 0) {
+        notesList.innerHTML = '<div class="text-center text-[#506795] py-8">메모가 없습니다</div>';
         return;
     }
 
-    memoList.innerHTML = '';
-
-    memos.forEach(memo => {
-        const item = memoItemTemplate.content.cloneNode(true);
-        const memoItemDiv = item.querySelector('.memo-item');
-        const titleElement = item.querySelector('.memo-title');
-        const previewElement = item.querySelector('.memo-preview');
-        const dateElement = item.querySelector('.memo-date');
-        const editBtn = item.querySelector('.btn-edit');
-        const deleteBtn = item.querySelector('.btn-delete');
-
-        memoItemDiv.dataset.id = memo.id;
-        titleElement.textContent = memo.title;
-        previewElement.textContent = memo.content.substring(0, 50) + (memo.content.length > 50 ? '...' : '');
-        dateElement.textContent = formatDate(memo.updated_at);
-
-        // 클릭 이벤트
-        memoItemDiv.addEventListener('click', () => selectMemo(memo.id));
-
-        // 수정 버튼
-        editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            selectMemo(memo.id);
-        });
-
-        // 삭제 버튼
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openConfirmDialog(memo.id, memo.title);
-        });
-
-        memoList.appendChild(item);
+    filteredNotes.forEach(note => {
+        const noteElement = createNoteElement(note);
+        notesList.appendChild(noteElement);
     });
+}
 
-    // 현재 선택된 메모 강조
-    if (currentMemoId) {
-        const activeItem = memoList.querySelector(`[data-id="${currentMemoId}"]`);
-        if (activeItem) {
-            activeItem.classList.add('active');
+// Create note list item element
+function createNoteElement(note) {
+    const div = document.createElement('div');
+    const isActive = currentNoteId === note.id;
+
+    div.className = `group cursor-pointer p-4 rounded-xl transition-all border ${
+        isActive
+            ? 'bg-primary/10 border-primary/10'
+            : 'hover:bg-[#e8ebf3] dark:hover:bg-[#1f2937] border-transparent'
+    }`;
+
+    const date = new Date(note.updated_at);
+    const dateStr = formatNoteDate(date);
+
+    div.innerHTML = `
+        <div class="flex justify-between items-start mb-1">
+            <h3 class="text-[#0e121b] dark:text-white text-base font-semibold leading-tight line-clamp-1">${escapeHtml(note.title)}</h3>
+            <span class="text-[11px] text-[#506795] font-medium shrink-0">${dateStr}</span>
+        </div>
+        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(note.content)}</p>
+    `;
+
+    div.onclick = () => selectNote(note.id);
+    return div;
+}
+
+// Select and open a note
+async function selectNote(id) {
+    try {
+        const response = await fetch(`/api/memos/${id}`);
+        const result = await response.json();
+
+        if (result.success) {
+            currentNoteId = id;
+            const note = result.data;
+
+            memoTitle.value = note.title;
+            memoContent.value = note.content;
+
+            // Update date
+            const date = new Date(note.updated_at);
+            memoDate.textContent = formatFullDate(date);
+
+            // Update read time
+            updateReadTime();
+
+            // Show editor
+            showEditor();
+
+            // Update list styling
+            renderNotesList();
+            deleteBtn.style.display = 'block';
         }
+    } catch (error) {
+        console.error('❌ 메모 로드 실패:', error);
     }
 }
 
-/**
- * 메모 선택 및 편집
- */
-function selectMemo(id) {
-    const memo = getMemoById(id);
-    if (!memo) return;
-
-    currentMemoId = id;
-    titleInput.value = memo.title;
-    contentInput.value = memo.content;
-    detailTitle.textContent = `메모 편집: ${memo.title}`;
-    submitBtn.textContent = '수정';
-    cancelBtn.style.display = 'inline-flex';
-    clearBtn.style.display = 'inline-flex';
-
-    updateTitleCount();
-    updateContentCount();
-    renderMemoList();
-
-    // 스크롤
-    if (window.innerWidth <= 768) {
-        memoForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+// Create new note
+function createNewNote() {
+    currentNoteId = null;
+    memoTitle.value = '';
+    memoContent.value = '';
+    memoDate.textContent = new Date().toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    memoReadTime.textContent = '0분 읽기';
+    showEditor();
+    memoTitle.focus();
+    deleteBtn.style.display = 'none';
+    renderNotesList();
 }
 
-// =====================
-// 폼 처리
-// =====================
-
-/**
- * 폼 제출
- */
-function handleFormSubmit(e) {
-    e.preventDefault();
-
-    const title = titleInput.value.trim();
-    const content = contentInput.value.trim();
+// Update current note
+async function updateCurrentNote() {
+    const title = memoTitle.value.trim();
+    const content = memoContent.value.trim();
 
     if (!title || !content) {
-        showMessage('제목과 내용을 입력해주세요', 'error');
         return;
     }
 
-    if (currentMemoId) {
-        updateMemo(currentMemoId, title, content);
+    // Show saving status
+    saveStatus.textContent = 'schedule';
+    saveText.textContent = '저장 중...';
+
+    // Clear previous timeout
+    if (saveTimeout) {
+        clearTimeout(saveTimeout);
+    }
+
+    // Auto-save after 1 second
+    saveTimeout = setTimeout(async () => {
+        try {
+            let response;
+
+            if (currentNoteId) {
+                // Update existing note
+                response = await fetch(`/api/memos/${currentNoteId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+            } else {
+                // Create new note
+                response = await fetch('/api/memos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                if (!currentNoteId && result.data.id) {
+                    currentNoteId = result.data.id;
+                    memoDate.textContent = new Date().toLocaleDateString('ko-KR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                }
+
+                // Update save status
+                saveStatus.textContent = 'cloud_done';
+                saveText.textContent = '저장됨';
+
+                // Reload notes list
+                loadMemos();
+            }
+        } catch (error) {
+            console.error('❌ 저장 실패:', error);
+            saveStatus.textContent = 'cloud_off';
+            saveText.textContent = '저장 실패';
+        }
+    }, 1000);
+}
+
+// Update read time
+function updateReadTime() {
+    const content = memoContent.value;
+    const wordCount = content.trim().split(/\s+/).length;
+    const readMinutes = Math.max(1, Math.ceil(wordCount / 200));
+    memoReadTime.textContent = `${readMinutes}분 읽기`;
+}
+
+// Handle search
+function handleSearch(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+
+    if (!term) {
+        filteredNotes = allNotes;
     } else {
-        createMemo(title, content);
+        filteredNotes = allNotes.filter(note =>
+            note.title.toLowerCase().includes(term) ||
+            note.content.toLowerCase().includes(term)
+        );
+    }
+
+    renderNotesList();
+}
+
+// Open delete modal
+function openDeleteModal() {
+    if (currentNoteId) {
+        deleteModal.style.display = 'flex';
     }
 }
 
-/**
- * 폼 취소
- */
-function handleCancel() {
-    currentMemoId = null;
-    resetForm();
+// Close delete modal
+function closeDeleteModal() {
+    deleteModal.style.display = 'none';
 }
 
-/**
- * 폼 초기화
- */
-function handleClear() {
-    if (confirm('작성 중인 내용을 모두 삭제하시겠습니까?')) {
-        currentMemoId = null;
-        resetForm();
+// Confirm delete
+async function confirmDelete() {
+    if (!currentNoteId) return;
+
+    try {
+        const response = await fetch(`/api/memos/${currentNoteId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            closeDeleteModal();
+            showNotification('메모가 삭제되었습니다');
+            loadMemos();
+            showEmptyState();
+            deleteBtn.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('❌ 삭제 실패:', error);
+        showNotification('메모 삭제에 실패했습니다', 'error');
     }
 }
 
-/**
- * 폼 리셋
- */
-function resetForm() {
-    memoForm.reset();
-    titleInput.value = '';
-    contentInput.value = '';
-    currentMemoId = null;
-    detailTitle.textContent = '새 메모 작성';
-    submitBtn.textContent = '저장';
-    cancelBtn.style.display = 'none';
-    clearBtn.style.display = 'none';
-    updateTitleCount();
-    updateContentCount();
-    renderMemoList();
-    messageDiv.innerHTML = '';
+// Show editor
+function showEditor() {
+    emptyState.style.display = 'none';
+    editorContent.style.display = 'flex';
 }
 
-// =====================
-// 입력 필드 카운팅
-// =====================
-
-/**
- * 제목 글자 수 업데이트
- */
-function updateTitleCount() {
-    const count = titleInput.value.length;
-    titleCount.textContent = `${count}/255`;
+// Show empty state
+function showEmptyState() {
+    emptyState.style.display = 'flex';
+    editorContent.style.display = 'none';
+    deleteBtn.style.display = 'none';
 }
 
-/**
- * 내용 글자 수 업데이트
- */
-function updateContentCount() {
-    const count = contentInput.value.length;
-    contentCount.textContent = `${count}자`;
-}
+// Toggle dark mode
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
 
-// =====================
-// 메시지 표시
-// =====================
-
-/**
- * 메시지 표시
- */
-function showMessage(text, type = 'info') {
-    messageDiv.textContent = text;
-    messageDiv.className = `message show ${type}`;
-
-    // 3초 후 자동 사라짐
-    setTimeout(() => {
-        messageDiv.classList.remove('show');
-    }, 3000);
-}
-
-// =====================
-// 확인 다이얼로그
-// =====================
-
-let deleteTargetId = null;
-
-/**
- * 확인 다이얼로그 열기
- */
-function openConfirmDialog(id, title) {
-    deleteTargetId = id;
-    confirmMessage.textContent = `"${title}" 메모를 삭제하시겠습니까?`;
-    confirmDialog.style.display = 'flex';
-}
-
-/**
- * 확인 다이얼로그 닫기
- */
-function closeConfirmDialog() {
-    confirmDialog.style.display = 'none';
-    deleteTargetId = null;
-}
-
-/**
- * 삭제 확인
- */
-function handleConfirmDelete() {
-    if (deleteTargetId) {
-        deleteMemo(deleteTargetId);
-        closeConfirmDialog();
+    if (isDark) {
+        html.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    } else {
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
     }
 }
 
-// 다이얼로그 외부 영역 클릭으로 닫기
-confirmDialog.addEventListener('click', (e) => {
-    if (e.target === confirmDialog) {
-        closeConfirmDialog();
+// Load theme preference
+function loadTheme() {
+    const theme = localStorage.getItem('theme') || 'light';
+    const html = document.documentElement;
+
+    if (theme === 'dark') {
+        html.classList.add('dark');
+    } else {
+        html.classList.remove('dark');
     }
-});
+}
 
-// =====================
-// 유틸리티 함수
-// =====================
-
-/**
- * 날짜 포맷팅
- */
-function formatDate(dateString) {
-    const date = new Date(dateString);
+// Format date for note list
+function formatNoteDate(date) {
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) {
-        return '방금 전';
-    } else if (diffMins < 60) {
-        return `${diffMins}분 전`;
-    } else if (diffHours < 24) {
-        return `${diffHours}시간 전`;
-    } else if (diffDays < 7) {
-        return `${diffDays}일 전`;
-    } else {
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    }
-}
+    if (diffMins < 1) return '방금 전';
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
 
-// =====================
-// 검색 기능
-// =====================
-
-/**
- * 메모 검색
- */
-function handleSearch(e) {
-    const searchTerm = e.target.value.toLowerCase().trim();
-
-    // 검색 초기화 버튼 표시/숨김
-    if (searchTerm.length > 0) {
-        searchClearBtn.style.display = 'inline-flex';
-    } else {
-        searchClearBtn.style.display = 'none';
-    }
-
-    // 검색 결과 필터링
-    if (searchTerm.length === 0) {
-        renderMemoList(); // 원본 목록 표시
-    } else {
-        const filteredMemos = memos.filter(memo => {
-            const title = memo.title.toLowerCase();
-            const content = memo.content.toLowerCase();
-            return title.includes(searchTerm) || content.includes(searchTerm);
-        });
-
-        renderFilteredMemoList(filteredMemos);
-    }
-}
-
-/**
- * 검색 초기화
- */
-function clearSearch() {
-    searchInput.value = '';
-    searchClearBtn.style.display = 'none';
-    renderMemoList();
-    searchInput.focus();
-}
-
-/**
- * 필터링된 메모 목록 렌더링
- */
-function renderFilteredMemoList(filteredMemos) {
-    if (filteredMemos.length === 0) {
-        memoList.innerHTML = '<div class="loading" style="padding: 60px 20px; color: #999;">검색 결과가 없습니다.</div>';
-        return;
-    }
-
-    memoList.innerHTML = '';
-
-    filteredMemos.forEach(memo => {
-        const item = memoItemTemplate.content.cloneNode(true);
-        const memoItemDiv = item.querySelector('.memo-item');
-        const titleElement = item.querySelector('.memo-title');
-        const previewElement = item.querySelector('.memo-preview');
-        const dateElement = item.querySelector('.memo-date');
-        const editBtn = item.querySelector('.btn-edit');
-        const deleteBtn = item.querySelector('.btn-delete');
-
-        memoItemDiv.dataset.id = memo.id;
-        titleElement.textContent = memo.title;
-        previewElement.textContent = memo.content.substring(0, 50) + (memo.content.length > 50 ? '...' : '');
-        dateElement.textContent = formatDate(memo.updated_at);
-
-        // 클릭 이벤트
-        memoItemDiv.addEventListener('click', () => selectMemo(memo.id));
-
-        // 수정 버튼
-        editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            selectMemo(memo.id);
-        });
-
-        // 삭제 버튼
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            openConfirmDialog(memo.id, memo.title);
-        });
-
-        memoList.appendChild(item);
+    return date.toLocaleDateString('ko-KR', {
+        month: 'short',
+        day: 'numeric'
     });
-
-    // 현재 선택된 메모 강조
-    if (currentMemoId) {
-        const activeItem = memoList.querySelector(`[data-id="${currentMemoId}"]`);
-        if (activeItem) {
-            activeItem.classList.add('active');
-        }
-    }
 }
 
-// =====================
-// 접근성 개선
-// =====================
+// Format full date
+function formatFullDate(date) {
+    return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+}
 
-// Enter 키로 메모 항목 선택
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (currentMemoId) {
-            handleCancel();
-        }
-    }
-});
+// Show notification
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-3 rounded-lg text-white font-medium z-50 ${
+        type === 'error' ? 'bg-red-500' : 'bg-primary'
+    }`;
+    notification.textContent = message;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Escape HTML special characters
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Load theme on startup
+loadTheme();
