@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const memoRoutes = require('./routes/memos');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -9,18 +11,53 @@ const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET || JWT_SECRET === 'default-secret-key') {
+  console.error('❌ JWT_SECRET이 설정되지 않았습니다. .env에 강력한 JWT_SECRET을 설정하세요.');
+  process.exit(1);
+}
 
 // =====================
 // 미들웨어 설정
 // =====================
 
+// 보안 헤더 설정
+app.use(helmet({
+  contentSecurityPolicy: false
+}));
+
 // CORS 설정
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost,http://localhost:80')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: '*',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS not allowed'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// 레이트 리밋 설정
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Body Parser 설정
 app.use(bodyParser.json({ limit: '10mb' }));
@@ -37,13 +74,13 @@ app.use((req, res, next) => {
 // =====================
 
 // 인증 라우트 (공개)
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
 // 사용자 관리 라우트 (관리자 전용 - 미들웨어에서 인증 처리)
-app.use('/api/users', userRoutes);
+app.use('/api/users', apiLimiter, userRoutes);
 
 // 메모 라우트 (인증 필요)
-app.use('/api/memos', authMiddleware, memoRoutes);
+app.use('/api/memos', apiLimiter, authMiddleware, memoRoutes);
 
 // 헬스 체크 엔드포인트
 app.get('/health', (req, res) => {

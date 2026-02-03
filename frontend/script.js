@@ -147,7 +147,7 @@ function createNoteElement(note) {
                 <span class="text-[11px] text-[#506795] font-medium">${dateStr}</span>
             </div>
         </div>
-        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(note.content)}</p>
+        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(stripHtml(note.content))}</p>
     `;
 
     div.onclick = () => selectNote(note.id);
@@ -480,7 +480,7 @@ function createTrashElement(note) {
                 <span class="text-[11px] text-[#506795] font-medium">${dateStr}</span>
             </div>
         </div>
-        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(note.content)}</p>
+        <p class="text-[#506795] text-sm leading-relaxed line-clamp-2">${escapeHtml(stripHtml(note.content))}</p>
     `;
 
     return div;
@@ -671,6 +671,13 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Strip HTML tags and return plain text
+function stripHtml(text) {
+    const div = document.createElement('div');
+    div.innerHTML = text;
+    return div.textContent || div.innerText || '';
 }
 
 // Text formatting functions

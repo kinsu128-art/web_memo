@@ -1,4 +1,41 @@
 const Memo = require('../models/Memo');
+const sanitizeHtml = require('sanitize-html');
+
+const MAX_TITLE_LENGTH = 255;
+const MAX_CONTENT_LENGTH = 50000;
+
+function sanitizeTitle(title) {
+  return sanitizeHtml(title, { allowedTags: [], allowedAttributes: {} }).trim();
+}
+
+function sanitizeContent(content) {
+  return sanitizeHtml(content, {
+    allowedTags: [
+      'b', 'i', 'u', 's', 'strong', 'em',
+      'p', 'br', 'ul', 'ol', 'li',
+      'pre', 'code', 'blockquote',
+      'span', 'div', 'h1', 'h2', 'h3', 'font'
+    ],
+    allowedAttributes: {
+      span: ['style'],
+      pre: ['style'],
+      blockquote: ['style'],
+      font: ['color']
+    },
+    allowedStyles: {
+      '*': {
+        color: [/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/i, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/i],
+        'background-color': [/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/i, /^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$/i],
+        'border-left': [/^4px solid #[0-9a-fA-F]{3,6}$/i],
+        padding: [/^\d+px$/i],
+        margin: [/^\d+px(\s+\d+px){0,3}$/i],
+        'border-radius': [/^\d+px$/i],
+        'font-family': [/^[a-zA-Z0-9,\s\-"]+$/i]
+      }
+    },
+    disallowedTagsMode: 'discard'
+  }).trim();
+}
 
 /**
  * 모든 메모 조회
@@ -73,14 +110,31 @@ exports.createMemo = async (req, res) => {
       });
     }
 
-    if (title.trim().length === 0 || content.trim().length === 0) {
+    const safeTitle = sanitizeTitle(title);
+    const safeContent = sanitizeContent(content);
+
+    if (safeTitle.length === 0 || safeContent.length === 0) {
       return res.status(400).json({
         success: false,
         message: '제목과 내용을 입력해주세요',
       });
     }
 
-    const memo = await Memo.create(title.trim(), content.trim(), req.user.id);
+    if (safeTitle.length > MAX_TITLE_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `제목은 ${MAX_TITLE_LENGTH}자 이하여야 합니다`,
+      });
+    }
+
+    if (safeContent.length > MAX_CONTENT_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `내용은 ${MAX_CONTENT_LENGTH}자 이하여야 합니다`,
+      });
+    }
+
+    const memo = await Memo.create(safeTitle, safeContent, req.user.id);
 
     res.status(201).json({
       success: true,
@@ -92,7 +146,7 @@ exports.createMemo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '메모를 생성할 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -120,14 +174,31 @@ exports.updateMemo = async (req, res) => {
       });
     }
 
-    if (title.trim().length === 0 || content.trim().length === 0) {
+    const safeTitle = sanitizeTitle(title);
+    const safeContent = sanitizeContent(content);
+
+    if (safeTitle.length === 0 || safeContent.length === 0) {
       return res.status(400).json({
         success: false,
         message: '제목과 내용을 입력해주세요',
       });
     }
 
-    const memo = await Memo.update(id, title.trim(), content.trim(), req.user.id);
+    if (safeTitle.length > MAX_TITLE_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `제목은 ${MAX_TITLE_LENGTH}자 이하여야 합니다`,
+      });
+    }
+
+    if (safeContent.length > MAX_CONTENT_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `내용은 ${MAX_CONTENT_LENGTH}자 이하여야 합니다`,
+      });
+    }
+
+    const memo = await Memo.update(id, safeTitle, safeContent, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -147,7 +218,7 @@ exports.updateMemo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '메모를 수정할 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -186,7 +257,7 @@ exports.deleteMemo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '메모를 삭제할 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -226,7 +297,7 @@ exports.toggleFavorite = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '즐겨찾기 토글에 실패했습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -247,7 +318,7 @@ exports.getFavorites = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '즐겨찾기를 불러올 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -268,7 +339,7 @@ exports.getTrash = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '휴지통을 불러올 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -307,7 +378,7 @@ exports.restoreMemo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '메모를 복원할 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };
@@ -345,7 +416,7 @@ exports.permanentDeleteMemo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: '메모를 삭제할 수 없습니다',
-      error: error.message,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 };

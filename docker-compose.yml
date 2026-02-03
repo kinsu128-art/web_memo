@@ -28,6 +28,9 @@ services:
       --max_allowed_packet=256M
       --skip-name-resolve
       --bind-address=0.0.0.0
+      --skip-ssl
+      --ssl=OFF
+      --require-secure-transport=OFF
 
   # 백엔드 애플리케이션
   backend:
@@ -79,3 +82,4 @@ networks:
 
 volumes:
   mysql_data:
+    driver: local
