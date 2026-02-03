@@ -691,38 +691,57 @@ function applyFormat(format) {
     memoContent.focus();
 
     const selection = window.getSelection();
-    if (!selection.toString() && format !== 'insertUnorderedList' && format !== 'insertOrderedList') {
+    const selectedText = selection.toString();
+
+    // 텍스트 선택 검증 (목록 제외)
+    if (!selectedText && format !== 'insertUnorderedList' && format !== 'insertOrderedList') {
         showNotification('텍스트를 선택해주세요', 'error');
         return;
     }
 
     console.log(`📝 포맷팅 적용: ${format}`);
 
-    switch (format) {
-        case 'bold':
-            document.execCommand('bold', false, null);
-            break;
-        case 'italic':
-            document.execCommand('italic', false, null);
-            break;
-        case 'underline':
-            document.execCommand('underline', false, null);
-            break;
-        case 'strikethrough':
-            document.execCommand('strikeThrough', false, null);
-            break;
-        case 'insertUnorderedList':
-            document.execCommand('insertUnorderedList', false, null);
-            break;
-        case 'insertOrderedList':
-            document.execCommand('insertOrderedList', false, null);
-            break;
-        default:
-            console.warn(`⚠️  알 수 없는 포맷: ${format}`);
-            return;
-    }
+    try {
+        switch (format) {
+            case 'bold':
+                document.execCommand('bold', false, null);
+                break;
+            case 'italic':
+                document.execCommand('italic', false, null);
+                break;
+            case 'underline':
+                document.execCommand('underline', false, null);
+                break;
+            case 'strikethrough':
+                document.execCommand('strikeThrough', false, null);
+                break;
+            case 'insertUnorderedList':
+                // 선택이 없으면 새 항목 생성
+                if (!selectedText) {
+                    document.execCommand('insertHTML', false, '<ul><li>항목</li></ul>');
+                } else {
+                    document.execCommand('insertUnorderedList', false, null);
+                }
+                break;
+            case 'insertOrderedList':
+                // 선택이 없으면 새 항목 생성
+                if (!selectedText) {
+                    document.execCommand('insertHTML', false, '<ol><li>항목</li></ol>');
+                } else {
+                    document.execCommand('insertOrderedList', false, null);
+                }
+                break;
+            default:
+                console.warn(`⚠️  알 수 없는 포맷: ${format}`);
+                return;
+        }
 
-    console.log(`✅ 포맷팅 완료`);
+        console.log(`✅ 포맷팅 완료`);
+    } catch (error) {
+        console.error('❌ 포맷팅 적용 중 오류:', error);
+        showNotification('포맷팅 적용에 실패했습니다', 'error');
+        return;
+    }
 
     // Update note
     updateCurrentNote();
@@ -739,8 +758,8 @@ function insertCode() {
     const selectedText = selection.toString();
 
     const codeHtml = selectedText
-        ? `<pre style="background:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;">${selectedText}</pre>`
-        : '<pre style="background:#f4f4f4;padding:10px;border-radius:5px;font-family:monospace;">코드를 입력하세요</pre>';
+        ? `<pre>${escapeHtml(selectedText)}</pre>`
+        : '<pre>코드를 입력하세요</pre>';
 
     document.execCommand('insertHTML', false, codeHtml);
 
@@ -759,8 +778,8 @@ function insertQuote() {
     const selectedText = selection.toString();
 
     const quoteHtml = selectedText
-        ? `<blockquote style="border-left:4px solid #2060df;padding-left:15px;margin:10px 0;color:#666;">${selectedText}</blockquote>`
-        : '<blockquote style="border-left:4px solid #2060df;padding-left:15px;margin:10px 0;color:#666;">인용구를 입력하세요</blockquote>';
+        ? `<blockquote>${escapeHtml(selectedText)}</blockquote>`
+        : '<blockquote>인용구를 입력하세요</blockquote>';
 
     document.execCommand('insertHTML', false, quoteHtml);
 

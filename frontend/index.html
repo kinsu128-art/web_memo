@@ -54,6 +54,45 @@
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
             background: #374151;
         }
+
+        /* Editor content styles */
+        #memoContent pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .dark #memoContent pre {
+            background: #2d3748;
+            color: #e2e8f0;
+        }
+
+        #memoContent blockquote {
+            border-left: 4px solid #2060df;
+            padding-left: 15px;
+            margin: 10px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .dark #memoContent blockquote {
+            color: #999;
+        }
+
+        #memoContent ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin: 10px 0;
+        }
+
+        #memoContent ol {
+            list-style-type: decimal;
+            margin-left: 20px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-[#0e121b] antialiased">
