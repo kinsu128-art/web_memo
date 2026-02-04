@@ -31,17 +31,15 @@ app.use(helmet({
 }));
 
 // CORS 설정
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost,http://localhost:80,http://localhost:8080')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('CORS not allowed'));
-  },
+  origin: isDevelopment
+    ? '*' // 개발 환경에서는 모든 origin 허용
+    : (process.env.ALLOWED_ORIGINS || 'http://localhost:8080,http://localhost')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
