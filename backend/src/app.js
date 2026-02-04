@@ -22,13 +22,16 @@ if (!JWT_SECRET || JWT_SECRET === 'default-secret-key') {
 // 미들웨어 설정
 // =====================
 
+// 프록시 신뢰 설정 (Nginx 뒤에서 실행되므로 필수)
+app.set('trust proxy', true);
+
 // 보안 헤더 설정
 app.use(helmet({
   contentSecurityPolicy: false
 }));
 
 // CORS 설정
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost,http://localhost:80')
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost,http://localhost:80,http://localhost:8080')
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);

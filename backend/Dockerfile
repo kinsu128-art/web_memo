@@ -16,6 +16,9 @@ RUN npm install
 # 소스 코드 복사
 COPY src ./src
 
+# 테스트 스크립트 복사
+COPY test-password.js ./
+
 # 포트 3000 노출
 EXPOSE 3000
 

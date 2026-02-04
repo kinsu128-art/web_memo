@@ -110,6 +110,8 @@ async function authFetch(url, options = {}) {
  */
 async function login(email, password) {
     try {
+        console.log('📨 [login] 요청 시작:', { email, password: '***' });
+
         const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {
@@ -118,19 +120,39 @@ async function login(email, password) {
             body: JSON.stringify({ email, password }),
         });
 
+        console.log('📨 [login] 응답 상태:', response.status, response.statusText);
+        console.log('📨 [login] 응답 헤더:', Object.fromEntries(response.headers.entries()));
+
+        // HTTP 에러 상태 확인
+        if (!response.ok) {
+            console.error('📨 [login] HTTP 에러:', response.status);
+            const errorData = await response.json().catch(() => ({ message: '알 수 없는 에러' }));
+            console.error('📨 [login] 에러 데이터:', errorData);
+            return {
+                success: false,
+                message: errorData.message || `HTTP ${response.status} 에러`,
+            };
+        }
+
         const result = await response.json();
+        console.log('📨 [login] 응답 데이터:', result);
 
         if (result.success) {
             TokenManager.setToken(result.data.token);
             TokenManager.setUser(result.data.user);
+            console.log('✅ [login] 로그인 성공');
+        } else {
+            console.log('❌ [login] 로그인 실패:', result.message);
         }
 
         return result;
     } catch (error) {
-        console.error('로그인 오류:', error);
+        console.error('❌ [login] 네트워크/파싱 에러:', error);
+        console.error('❌ [login] 에러 메시지:', error.message);
+        console.error('❌ [login] 에러 스택:', error.stack);
         return {
             success: false,
-            message: '로그인 처리 중 오류가 발생했습니다',
+            message: `로그인 오류: ${error.message}`,
         };
     }
 }

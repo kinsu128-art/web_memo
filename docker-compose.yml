@@ -1,38 +1,5 @@
 services:
-  # MySQL 데이터베이스
-  db:
-    image: mysql:8.0
-    container_name: memo_db
-    restart: unless-stopped
-    # user: "${UID:-1000}:${GID:-1000}"  # Windows에서는 주석 처리
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: ${DB_NAME:-memos_db}
-      MYSQL_USER: ${DB_USER:-memouser}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-memopass}
-      MYSQL_INITDB_SKIP_TZINFO: 1
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - memo_network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root}"]
-      timeout: 20s
-      retries: 15
-      start_period: 60s
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --max_allowed_packet=256M
-      --skip-name-resolve
-      --bind-address=0.0.0.0
-      --skip-ssl
-      --ssl=OFF
-      --require-secure-transport=OFF
-
-  # 백엔드 애플리케이션
+  # 백엔드 애플리케이션 (외부 MSSQL 사용)
   backend:
     build:
       context: ./backend
@@ -41,19 +8,17 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: ${DB_NAME:-memos_db}
-      DB_USER: ${DB_USER:-memouser}
-      DB_PASSWORD: ${DB_PASSWORD:-memopass}
+      DB_HOST: ${DB_HOST:-192.168.1.11}
+      DB_PORT: ${DB_PORT:-2433}
+      DB_NAME: ${DB_NAME:-dk_it}
+      DB_USER: ${DB_USER:-dkenterb}
+      DB_PASSWORD: ${DB_PASSWORD:-Micro@4580}
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-memo-app-secret-key-2024}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080,http://localhost}
     ports:
       - "3000:3000"
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - memo_network
 
@@ -65,7 +30,7 @@ services:
     container_name: memo_frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
     networks:
@@ -79,7 +44,3 @@ services:
 networks:
   memo_network:
     driver: bridge
-
-volumes:
-  mysql_data:
-    driver: local

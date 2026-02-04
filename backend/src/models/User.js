@@ -1,4 +1,4 @@
-const pool = require('../db');
+const { sql, poolPromise } = require('../db');
 const bcrypt = require('bcryptjs');
 
 const SALT_ROUNDS = 10;
@@ -14,13 +14,17 @@ class User {
      */
     static async create(email, password, name, role = 'user') {
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        const pool = await poolPromise;
 
-        const [result] = await pool.query(
-            'INSERT INTO users (email, password, name, role) VALUES (?, ?, ?, ?)',
-            [email, hashedPassword, name, role]
-        );
+        const result = await pool.request()
+            .input('email', sql.NVarChar(255), email)
+            .input('password', sql.NVarChar(255), hashedPassword)
+            .input('name', sql.NVarChar(100), name)
+            .input('role', sql.NVarChar(20), role)
+            .query('INSERT INTO memo_users (email, password, name, role) VALUES (@email, @password, @name, @role); SELECT SCOPE_IDENTITY() AS id;');
 
-        return this.findById(result.insertId);
+        const newId = result.recordset[0].id;
+        return this.findById(newId);
     }
 
     /**
@@ -29,11 +33,11 @@ class User {
      * @returns {Promise<Object|null>} 사용자 정보 또는 null
      */
     static async findByEmail(email) {
-        const [rows] = await pool.query(
-            'SELECT * FROM users WHERE email = ?',
-            [email]
-        );
-        return rows[0] || null;
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('email', sql.NVarChar(255), email)
+            .query('SELECT * FROM memo_users WHERE email = @email');
+        return result.recordset[0] || null;
     }
 
     /**
@@ -42,11 +46,11 @@ class User {
      * @returns {Promise<Object|null>} 사용자 정보 또는 null
      */
     static async findById(id) {
-        const [rows] = await pool.query(
-            'SELECT id, email, name, role, is_active, last_login_at, created_at, updated_at FROM users WHERE id = ?',
-            [id]
-        );
-        return rows[0] || null;
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query('SELECT id, email, name, role, is_active, last_login_at, created_at, updated_at FROM memo_users WHERE id = @id');
+        return result.recordset[0] || null;
     }
 
     /**
@@ -54,10 +58,10 @@ class User {
      * @returns {Promise<Array>} 사용자 목록
      */
     static async findAll() {
-        const [rows] = await pool.query(
-            'SELECT id, email, name, role, is_active, last_login_at, created_at, updated_at FROM users ORDER BY created_at DESC'
-        );
-        return rows;
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .query('SELECT id, email, name, role, is_active, last_login_at, created_at, updated_at FROM memo_users ORDER BY created_at DESC');
+        return result.recordset;
     }
 
     /**
@@ -69,12 +73,23 @@ class User {
     static async update(id, data) {
         const allowedFields = ['email', 'name', 'role', 'is_active'];
         const updates = [];
-        const values = [];
+        const pool = await poolPromise;
+        const request = pool.request().input('id', sql.Int, id);
 
         for (const field of allowedFields) {
             if (data[field] !== undefined) {
-                updates.push(`${field} = ?`);
-                values.push(data[field]);
+                updates.push(`${field} = @${field}`);
+
+                // 데이터 타입 지정
+                if (field === 'is_active') {
+                    request.input(field, sql.Bit, data[field] ? 1 : 0);
+                } else if (field === 'email') {
+                    request.input(field, sql.NVarChar(255), data[field]);
+                } else if (field === 'name') {
+                    request.input(field, sql.NVarChar(100), data[field]);
+                } else if (field === 'role') {
+                    request.input(field, sql.NVarChar(20), data[field]);
+                }
             }
         }
 
@@ -82,12 +97,7 @@ class User {
             return this.findById(id);
         }
 
-        values.push(id);
-        await pool.query(
-            `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
-            values
-        );
-
+        await request.query(`UPDATE memo_users SET ${updates.join(', ')} WHERE id = @id`);
         return this.findById(id);
     }
 
@@ -99,13 +109,14 @@ class User {
      */
     static async updatePassword(id, newPassword) {
         const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+        const pool = await poolPromise;
 
-        const [result] = await pool.query(
-            'UPDATE users SET password = ? WHERE id = ?',
-            [hashedPassword, id]
-        );
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .input('password', sql.NVarChar(255), hashedPassword)
+            .query('UPDATE memo_users SET password = @password WHERE id = @id');
 
-        return result.affectedRows > 0;
+        return result.rowsAffected[0] > 0;
     }
 
     /**
@@ -114,11 +125,18 @@ class User {
      * @returns {Promise<boolean>} 삭제 성공 여부
      */
     static async delete(id) {
-        // 사용자의 메모를 NULL로 설정 (orphan memos)
-        await pool.query('UPDATE memos SET user_id = NULL WHERE user_id = ?', [id]);
+        const pool = await poolPromise;
 
-        const [result] = await pool.query('DELETE FROM users WHERE id = ?', [id]);
-        return result.affectedRows > 0;
+        // 사용자의 메모를 NULL로 설정 (orphan memos)
+        await pool.request()
+            .input('id', sql.Int, id)
+            .query('UPDATE memos SET user_id = NULL WHERE user_id = @id');
+
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query('DELETE FROM memo_users WHERE id = @id');
+
+        return result.rowsAffected[0] > 0;
     }
 
     /**
@@ -128,7 +146,19 @@ class User {
      * @returns {Promise<boolean>} 일치 여부
      */
     static async verifyPassword(plainPassword, hashedPassword) {
-        return bcrypt.compare(plainPassword, hashedPassword);
+        console.log('🔍 [verifyPassword] 시작');
+        console.log('🔍 평문 비밀번호:', plainPassword);
+        console.log('🔍 평문 비밀번호 길이:', plainPassword?.length);
+        console.log('🔍 평문 비밀번호 타입:', typeof plainPassword);
+        console.log('🔍 해시 비밀번호:', hashedPassword);
+        console.log('🔍 해시 비밀번호 길이:', hashedPassword?.length);
+        console.log('🔍 해시 비밀번호 타입:', typeof hashedPassword);
+        console.log('🔍 해시 시작 문자:', hashedPassword?.substring(0, 7));
+
+        const result = await bcrypt.compare(plainPassword, hashedPassword);
+        console.log('🔍 bcrypt.compare 결과:', result);
+
+        return result;
     }
 
     /**
@@ -137,11 +167,11 @@ class User {
      * @returns {Promise<boolean>} 성공 여부
      */
     static async updateLastLogin(id) {
-        const [result] = await pool.query(
-            'UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?',
-            [id]
-        );
-        return result.affectedRows > 0;
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('id', sql.Int, id)
+            .query('UPDATE memo_users SET last_login_at = GETDATE() WHERE id = @id');
+        return result.rowsAffected[0] > 0;
     }
 
     /**
@@ -151,16 +181,17 @@ class User {
      * @returns {Promise<boolean>} 중복 여부
      */
     static async isEmailTaken(email, excludeId = null) {
-        let query = 'SELECT COUNT(*) as count FROM users WHERE email = ?';
-        const values = [email];
+        const pool = await poolPromise;
+        let query = 'SELECT COUNT(*) as count FROM memo_users WHERE email = @email';
+        const request = pool.request().input('email', sql.NVarChar(255), email);
 
         if (excludeId) {
-            query += ' AND id != ?';
-            values.push(excludeId);
+            query += ' AND id != @excludeId';
+            request.input('excludeId', sql.Int, excludeId);
         }
 
-        const [rows] = await pool.query(query, values);
-        return rows[0].count > 0;
+        const result = await request.query(query);
+        return result.recordset[0].count > 0;
     }
 }
 

@@ -1,4 +1,4 @@
-const pool = require('../db');
+const { sql, poolPromise } = require('../db');
 
 class Memo {
   /**
@@ -8,13 +8,11 @@ class Memo {
    */
   static async findAll(userId) {
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.query(
-        'SELECT * FROM memos WHERE user_id = ? AND is_deleted = FALSE ORDER BY updated_at DESC',
-        [userId]
-      );
-      connection.release();
-      return rows;
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .query('SELECT * FROM memos WHERE user_id = @userId AND is_deleted = 0 ORDER BY updated_at DESC');
+      return result.recordset;
     } catch (error) {
       console.error('❌ 메모 조회 실패:', error);
       throw error;
@@ -29,18 +27,17 @@ class Memo {
    */
   static async findById(id, userId = null) {
     try {
-      const connection = await pool.getConnection();
-      let query = 'SELECT * FROM memos WHERE id = ?';
-      const params = [id];
+      const pool = await poolPromise;
+      let query = 'SELECT * FROM memos WHERE id = @id';
+      const request = pool.request().input('id', sql.Int, id);
 
       if (userId !== null) {
-        query += ' AND user_id = ?';
-        params.push(userId);
+        query += ' AND user_id = @userId';
+        request.input('userId', sql.Int, userId);
       }
 
-      const [rows] = await connection.query(query, params);
-      connection.release();
-      return rows[0] || null;
+      const result = await request.query(query);
+      return result.recordset[0] || null;
     } catch (error) {
       console.error('❌ 메모 조회 실패:', error);
       throw error;
@@ -60,15 +57,16 @@ class Memo {
         throw new Error('제목과 내용은 필수입니다');
       }
 
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(
-        'INSERT INTO memos (user_id, title, content) VALUES (?, ?, ?)',
-        [userId, title, content]
-      );
-      connection.release();
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .input('title', sql.NVarChar(255), title)
+        .input('content', sql.NVarChar(sql.MAX), content)
+        .query('INSERT INTO memos (user_id, title, content) VALUES (@userId, @title, @content); SELECT SCOPE_IDENTITY() AS id;');
 
+      const newId = result.recordset[0].id;
       // 생성된 메모 반환
-      return this.findById(result.insertId);
+      return this.findById(newId);
     } catch (error) {
       console.error('❌ 메모 생성 실패:', error);
       throw error;
@@ -89,14 +87,15 @@ class Memo {
         throw new Error('제목과 내용은 필수입니다');
       }
 
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(
-        'UPDATE memos SET title = ?, content = ? WHERE id = ? AND user_id = ?',
-        [title, content, id, userId]
-      );
-      connection.release();
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .input('title', sql.NVarChar(255), title)
+        .input('content', sql.NVarChar(sql.MAX), content)
+        .query('UPDATE memos SET title = @title, content = @content WHERE id = @id AND user_id = @userId');
 
-      if (result.affectedRows === 0) {
+      if (result.rowsAffected[0] === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
@@ -116,14 +115,13 @@ class Memo {
    */
   static async delete(id, userId) {
     try {
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(
-        'UPDATE memos SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ? AND user_id = ? AND is_deleted = FALSE',
-        [id, userId]
-      );
-      connection.release();
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .query('UPDATE memos SET is_deleted = 1, deleted_at = GETDATE() WHERE id = @id AND user_id = @userId AND is_deleted = 0');
 
-      if (result.affectedRows === 0) {
+      if (result.rowsAffected[0] === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
@@ -141,13 +139,11 @@ class Memo {
    */
   static async findTrash(userId) {
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.query(
-        'SELECT * FROM memos WHERE user_id = ? AND is_deleted = TRUE ORDER BY deleted_at DESC',
-        [userId]
-      );
-      connection.release();
-      return rows;
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .query('SELECT * FROM memos WHERE user_id = @userId AND is_deleted = 1 ORDER BY deleted_at DESC');
+      return result.recordset;
     } catch (error) {
       console.error('❌ 휴지통 조회 실패:', error);
       throw error;
@@ -162,14 +158,13 @@ class Memo {
    */
   static async restore(id, userId) {
     try {
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(
-        'UPDATE memos SET is_deleted = FALSE, deleted_at = NULL WHERE id = ? AND user_id = ? AND is_deleted = TRUE',
-        [id, userId]
-      );
-      connection.release();
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .query('UPDATE memos SET is_deleted = 0, deleted_at = NULL WHERE id = @id AND user_id = @userId AND is_deleted = 1');
 
-      if (result.affectedRows === 0) {
+      if (result.rowsAffected[0] === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
@@ -188,14 +183,13 @@ class Memo {
    */
   static async permanentDelete(id, userId) {
     try {
-      const connection = await pool.getConnection();
-      const [result] = await connection.query(
-        'DELETE FROM memos WHERE id = ? AND user_id = ? AND is_deleted = TRUE',
-        [id, userId]
-      );
-      connection.release();
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .query('DELETE FROM memos WHERE id = @id AND user_id = @userId AND is_deleted = 1');
 
-      if (result.affectedRows === 0) {
+      if (result.rowsAffected[0] === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
@@ -214,31 +208,29 @@ class Memo {
    */
   static async toggleFavorite(id, userId) {
     try {
-      const connection = await pool.getConnection();
+      const pool = await poolPromise;
 
       // 현재 상태 확인 (사용자 확인 포함)
-      const [rows] = await connection.query(
-        'SELECT is_favorite FROM memos WHERE id = ? AND user_id = ?',
-        [id, userId]
-      );
+      const selectResult = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .query('SELECT is_favorite FROM memos WHERE id = @id AND user_id = @userId');
 
-      if (rows.length === 0) {
-        connection.release();
+      if (selectResult.recordset.length === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
-      const currentState = rows[0].is_favorite;
+      const currentState = selectResult.recordset[0].is_favorite;
       const newState = !currentState;
 
       // 상태 업데이트
-      const [result] = await connection.query(
-        'UPDATE memos SET is_favorite = ? WHERE id = ? AND user_id = ?',
-        [newState, id, userId]
-      );
+      const updateResult = await pool.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .input('newState', sql.Bit, newState ? 1 : 0)
+        .query('UPDATE memos SET is_favorite = @newState WHERE id = @id AND user_id = @userId');
 
-      connection.release();
-
-      if (result.affectedRows === 0) {
+      if (updateResult.rowsAffected[0] === 0) {
         throw new Error('메모를 찾을 수 없습니다');
       }
 
@@ -257,13 +249,11 @@ class Memo {
    */
   static async findFavorites(userId) {
     try {
-      const connection = await pool.getConnection();
-      const [rows] = await connection.query(
-        'SELECT * FROM memos WHERE user_id = ? AND is_favorite = TRUE AND is_deleted = FALSE ORDER BY updated_at DESC',
-        [userId]
-      );
-      connection.release();
-      return rows;
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('userId', sql.Int, userId)
+        .query('SELECT * FROM memos WHERE user_id = @userId AND is_favorite = 1 AND is_deleted = 0 ORDER BY updated_at DESC');
+      return result.recordset;
     } catch (error) {
       console.error('❌ 즐겨찾기 조회 실패:', error);
       throw error;
